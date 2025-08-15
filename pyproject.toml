@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools >= 38.6", "pip >= 10"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyValEIA"
+version = "0.0.1"
+description = 'Validation tools for the Equatorial Ionization Anomally'
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Angeline Burrell", email = "angeline.g.burrell.civ@us.navy.mil"}
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows"
+]
+keywords = [
+  "validation",
+  "ionosphere",
+  "EIA",
+  "equatorial ionization anomally",
+  "equatorial ionisation anomally",
+  "heliophysics",
+]
+dependencies = [
+  "apexpy",
+  "cartopy",
+  "matplotlib",
+  "netCDF4",
+  "numpy",
+  "pandas",
+  "pydarn",
+  "PyIRI",
+  "pysat",
+  "pysatMadrigal",
+  "requests",
+  "scipy"]
+
+[project.optional-dependencies]
+test = [
+  "coverage[toml]",
+  "flake8",
+  "flake8-docstrings"
+]
+
+[project.urls]
+Source = "https://github.com/aburrell/pyValEIA"
+Tracker = "https://github.com/aburrell/pyValEIA/issues"
+Download = "https://github.com/aburrell/pyValEIA/releases"
