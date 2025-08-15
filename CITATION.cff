@@ -1,0 +1,21 @@
+title: pyValEIA
+version: 0.0.1
+cff-version: 1.2.0
+type: software
+repository-code: "https://github.com/aburrell/pyValEIA"
+authors:
+  - family-names: "Cardenas-O'Toole"
+    given-names: "Alana"
+  - family-names: "Burrell"
+    given-names: "Angeline G."
+    affiliation: "Naval Research Laboratory"
+    orcid: "https://orcid.org/0000-0001-8875-9326"
+  - family-names: "Hickey"
+    given-names: "Dustin"
+keywords:
+  - "validation"
+  - "ionosphere"
+  - "EIA"
+  - "equatorial ionization anomally"
+  - "equatorial ionisation anomally"
+  - "heliophysics"
