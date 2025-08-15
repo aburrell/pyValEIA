@@ -4,19 +4,22 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 import numpy as np
+import os
+from pathlib import Path
+import pandas as pd
+
+from apexpy import Apex
 import PyIRI
 import PyIRI.edp_update as ml
-import matplotlib.pyplot as plt
-import pandas as pd
-from datetime import datetime, timedelta
-from apexpy import Apex
-from pathlib import Path
 
-from open_daily_files import open_daily
-from EIA_type_detection import eia_complete
-from Load_Swarm2 import load_EFI as load_swrm
-import os
+
+from pyValEIA.open_daily_files import open_daily
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
 
 
 def compute_magnetic_coords(lat, lon, time):
@@ -118,8 +121,8 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
                                format=format_date)
 
     # Calculate decimal hours for PyIRI input
-    nim_decimal_hrs = (date_nimo.hour + date_nimo.minute/60
-                       + date_nimo.second/3600)
+    nim_decimal_hrs = (date_nimo.hour + date_nimo.minute / 60
+                       + date_nimo.second / 3600)
     nim_glon = daily_df['Nimo_GLon']
     nim_alt = daily_df['Nimo_Swarm_Alt']
     nim_max_mlats = daily_df['Nimo_Max_MLat']
@@ -234,9 +237,9 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
                        ymin=min(swarm_pass['Ne']),
                        ymax=sw_peak_nes, alpha=0.5, color='black')
             if 'south' in daily_df['Swarm_EIA_Type'].iloc[i]:
-                axs.legend(fontsize=fosi-3, loc='upper right')
+                axs.legend(fontsize=fosi - 3, loc='upper right')
             else:
-                axs.legend(fontsize=fosi-3, loc='upper left')
+                axs.legend(fontsize=fosi - 3, loc='upper left')
             axs.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
             axs.set_title("Swarm " + sat + ' ' + st1.strftime('%Y%m%d %H:%M')
                           + '-' + st2.strftime('%H:%M'))
@@ -265,16 +268,16 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
             axi.set_title("PyIRI " + plot_date_str
                           + " (" + str(int(aalt[0])) + "km)")
             if 'south' in eia_type_slope:
-                axi.legend(fontsize=fosi-3, loc='upper right')
+                axi.legend(fontsize=fosi - 3, loc='upper right')
             else:
-                axi.legend(fontsize=fosi-3, loc='upper left')
+                axi.legend(fontsize=fosi - 3, loc='upper left')
 
             # Plot SAVING --------------------------
             ds = st1.strftime('%Y%m%d')
             ys = st1.strftime('%Y')
             plt.suptitle(str(int(glon1)) + ' GeoLon and '
                          + str(np.round(daily_df['LT_Hour'].iloc[i], 1))
-                         + 'LT', x=0.5, y=0.94, fontsize=fosi+10)
+                         + 'LT', x=0.5, y=0.94, fontsize=fosi + 10)
 
             # Save fig to cwd if not provided
             if fig_save_dir == '':
@@ -294,7 +297,7 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
     # Save file to cwd if dir not provided
     if file_save_dir == '':
         file_save_dir = os.getcwd()
-    file_dir = file_save_dir + '/'+ys
+    file_dir = file_save_dir + '/' + ys
     Path(file_dir).mkdir(parents=True, exist_ok=True)
     save_file = file_dir + '/PyIRI_EIA_type' + '_' + ds + 'ascii.txt'
 

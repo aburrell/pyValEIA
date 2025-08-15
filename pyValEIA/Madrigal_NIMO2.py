@@ -5,21 +5,22 @@
 # unlimited.
 # ----------------------------------------------------------------------------
 
-import numpy as np
-import pandas as pd
 import datetime as dt
+import glob
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
-from netCDF4 import Dataset
-import pydarn
+import numpy as np
+import os
+from pathlib import Path
+import pandas as pd
+
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import matplotlib.gridspec as gridspec
-from pathlib import Path
-from EIA_type_detection import eia_complete
-from Load_NIMO2 import compute_magnetic_coords, load_nimo, nimo_mad_conjunction
-import os
-import glob
+from netCDF4 import Dataset
+import pydarn
+
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA import Load_NIMO2
 
 
 def longitude_to_local_time(longitude, utc_time):
@@ -76,7 +77,7 @@ def load_madrigal(stime, fdir):
     mad_glon = file_id.variables['glon'][:]
     mad_dtec = file_id.variables['dtec'][:]
     mad_time = file_id.variables['timestamps'][:]  # every 5 minutes
-    mad_date_list = np.array([sday + dt.timedelta(minutes=x*5)
+    mad_date_list = np.array([sday + dt.timedelta(minutes=x * 5)
                               for x in range(288)])
 
     mad_dc = {
@@ -123,7 +124,7 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     time_min = stime.minute
     if time_remain != 0:
         if time_remain < 3:
-            stime = stime.replace(minute=time_min-time_remain)
+            stime = stime.replace(minute=time_min - time_remain)
         else:
             stime = stime.replace(minute=stime.minute + 5 - stime.minute % 5)
 
@@ -268,7 +269,7 @@ def mad_tec_clean(mad_tec_meas, mad_std_meas, mad_mlat, mlat_val, max_nan=20):
     # we want to try to get it below 20 until we hit max_nan degrees mag lat
     if (nan_perc > max_nan) & (nan_perc < 80):
         while (nan_perc > max_nan) & (mlat_try >= max_nan) & (nan_perc < 80):
-            mlat_try = mlat_try-1
+            mlat_try = mlat_try - 1
             mad_tec_lat = mad_tec_meas[abs(mad_mlat) < mlat_try]
             mad_std_lat = mad_std_meas[abs(mad_mlat) < mlat_try]
 
@@ -320,7 +321,7 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
     time_min = stime.minute
     if time_remain != 0:
         if time_remain < 3:
-            stime = stime.replace(minute=time_min-time_remain)
+            stime = stime.replace(minute=time_min - time_remain)
         else:
             stime = stime.replace(minute=stime.minute + 5 - stime.minute % 5)
 
@@ -337,17 +338,16 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
 
         # longiutdinal range
         lon_min = lon_start + 5 * i
-        lon_max = lon_start+5*(i+1)
+        lon_max = lon_start + 5 * (i + 1)
 
         # compute magnetic latitude
         mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
-        mad_mlat, mad_mlon = compute_magnetic_coords(mad_dc['glat'],
-                                                     mad_lon_ls,
-                                                     [mad_dc['time'][mt]])
+        mad_mlat, mad_mlon = Load_NIMO2.compute_magnetic_coords(
+            mad_dc['glat'], mad_lon_ls, [mad_dc['time'][mt]])
 
         # tec and dtec values by time
-        mad_tec_T = mad_dc['tec'][mt:mt+3, :, :]
-        mad_dtec_T = mad_dc['dtec'][mt:mt+3, :, :]
+        mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
+        mad_dtec_T = mad_dc['dtec'][mt:mt + 3, :, :]
 
         # by longitude
         mad_tec_lon = mad_tec_T[:, :, ((mad_dc['glon'] >= lon_min)
@@ -377,9 +377,9 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
             mad_tec_meas, mad_std_meas, mad_mlat, mlat_val)
 
         # get nimo data ------------------------------------------------
-        glon_val = (lon_max+lon_min)/2
-        nimo_df, nimo_map = nimo_mad_conjunction(nimo_dc, mlat_val,
-                                                 glon_val, stime)
+        glon_val = (lon_max + lon_min) / 2
+        nimo_df, nimo_map = Load_NIMO2.nimo_mad_conjunction(nimo_dc, mlat_val,
+                                                            glon_val, stime)
 
         # Add legend as first panel
         if i == 0:
@@ -580,17 +580,17 @@ def NIMO_MAD_DailyFile(
     df = pd.DataFrame(columns=columns)
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
     mad_dc = load_madrigal(sday, mad_file_dir)
-    nimo_dc = load_nimo(start_day, fdir=nimo_file_dir,
-                        name_format=nimo_name_format, ne_var=ne_var,
-                        lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
-                        hr_var=hr_var, min_var=min_var, tec_var=tec_var,
-                        hmf2_var=hmf2_var, nmf2_var=nmf2_var,
-                        time_cadence=nimo_cadence)  # get nimo data
+    nimo_dc = Load_NIMO2.load_nimo(
+        start_day, fdir=nimo_file_dir, name_format=nimo_name_format,
+        ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
+        hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
+        nmf2_var=nmf2_var, time_cadence=nimo_cadence)  # get nimo data
+
     f = -1
     mlat_val_og = mlat_val
     for m in range(96):
         m_t = m * 3  # time range 5 minute cadence, 15 minute windows
-        stime = sday + timedelta(minutes=5*m_t)
+        stime = sday + dt.timedelta(minutes=5 * m_t)
         mt = np.where(stime == mad_dc['time'])[0][0]
         j = 2
         panel1 = 0
@@ -601,17 +601,17 @@ def NIMO_MAD_DailyFile(
             mlat_val = mlat_val_og
 
             # longiutdinal range
-            lon_min = lon_start+5*i
-            lon_max = lon_start+5*(i+1)
+            lon_min = lon_start + 5 * i
+            lon_max = lon_start + 5 * (i + 1)
 
             # compute magnetic latitude
-            mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min+lon_max) / 2
-            mad_mlat, mad_mlon = compute_magnetic_coords(mad_dc['glat'],
-                                                         mad_lon_ls,
-                                                         [mad_dc['time'][mt]])
+            mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
+            mad_mlat, mad_mlon = Load_NIMO2.compute_magnetic_coords(
+                mad_dc['glat'], mad_lon_ls, [mad_dc['time'][mt]])
+
             # tec and dtec values by time
-            mad_tec_T = mad_dc['tec'][mt:mt+3, :, :]
-            mad_dtec_T = mad_dc['dtec'][mt:mt+3, :, :]
+            mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
+            mad_dtec_T = mad_dc['dtec'][mt:mt + 3, :, :]
 
             # by longitude
             mad_tec_lon = mad_tec_T[:, :, ((mad_dc['glon'] >= lon_min)
@@ -644,9 +644,8 @@ def NIMO_MAD_DailyFile(
             # get nimo and conjunction
             glon_val = (lon_max + lon_min) / 2
             try:
-                nimo_df, nimo_map = nimo_mad_conjunction(nimo_dc, mlat_val,
-                                                         glon_val, stime,
-                                                         max_tdif=max_tdif)
+                nimo_df, nimo_map = Load_NIMO2.nimo_mad_conjunction(
+                    nimo_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
             except ValueError:
                 continue
 
@@ -767,8 +766,8 @@ def NIMO_MAD_DailyFile(
                                 label=eia_type_slope)
                     for pi, p in enumerate(plats):  # Plot Madrigal peaks
                         lat_loc = (abs(p - mad_df["Mag_Lat"]).argmin())
-                        df_strl = 'Mad_Peak_MLat'+str(pi+1)
-                        df_strn = 'Mad_Peak_TEC'+str(pi+1)
+                        df_strl = 'Mad_Peak_MLat' + str(pi + 1)
+                        df_strn = 'Mad_Peak_TEC' + str(pi + 1)
                         df.at[f, df_strl] = mad_df["Mag_Lat"].iloc[lat_loc]
                         df.at[f, df_strn] = mad_df["tec"].iloc[lat_loc]
                         if fig_on:
@@ -786,11 +785,11 @@ def NIMO_MAD_DailyFile(
         if fig_on:
             t1 = mad_dc['time'][mt].strftime('%Y/%m/%d %H:%M')
             ts1 = mad_dc['time'][mt].strftime('%H%M')
-            t2 = mad_dc['time'][mt] + timedelta(minutes=15)
+            t2 = mad_dc['time'][mt] + dt.timedelta(minutes=15)
             ts2 = t2.strftime('%H%M')
             t2 = t2.strftime('%H:%M')
             plt.suptitle('Madrigal TEC from ' + t1 + '-' + t2, x=0.5, y=0.93,
-                         fontsize=fosi+10)
+                         fontsize=fosi + 10)
             ds = mad_dc['time'][mt].strftime('%Y%m%d')
             ys = mad_dc['time'][mt].strftime('%Y')
 
@@ -801,8 +800,8 @@ def NIMO_MAD_DailyFile(
             Path(save_dir).mkdir(parents=True, exist_ok=True)
 
             # Save Figures
-            save_as = (save_dir + '/NIMO_MADRIGAL_' + ds + '_' + ts1 + '_' +
-                       ts2 + '_' + str(lon_start) + '_'
+            save_as = (save_dir + '/NIMO_MADRIGAL_' + ds + '_' + ts1 + '_'
+                       + ts2 + '_' + str(lon_start) + '_'
                        + str(lon_start + 5 * 12) + 'glon.jpg')
             fig.savefig(save_as)
             plt.close()
@@ -820,10 +819,10 @@ def NIMO_MAD_DailyFile(
     if file_save_dir == '':
         file_save_dir = os.getcwd()
 
-    file_dir = file_save_dir+ys
+    file_dir = file_save_dir + ys
     Path(file_dir).mkdir(parents=True, exist_ok=True)
-    save_file = (file_dir + '/NIMO_MADRIGAL_EIA_type' + '_' + ds + '_' +
-                 str(lon_start) + 'glon_ascii.txt')
+    save_file = (file_dir + '/NIMO_MADRIGAL_EIA_type' + '_' + ds + '_'
+                 + str(lon_start) + 'glon_ascii.txt')
 
     delimiter = '\t'  # Use '\t' for tab-separated text
 

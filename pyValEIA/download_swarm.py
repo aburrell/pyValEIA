@@ -5,12 +5,12 @@
 # unlimited.
 # ----------------------------------------------------------------------------
 
+import datetime as dt
+from dateutil.relativedelta import relativedelta
+import glob
 import requests
 import os
 import zipfile
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-import glob
 
 
 def download_and_unzip(
@@ -88,7 +88,7 @@ def download_and_unzip(
         os.makedirs(out_folder)
 
     # Start at first day and go for num_days
-    start_date = datetime(yer, mnth, dy)
+    start_date = dt.datetime(yer, mnth, dy)
     end_date = start_date + relativedelta(days=num_days)
 
     # Start with start date and go until end date is reached
@@ -108,7 +108,7 @@ def download_and_unzip(
         # Set Full File URL
         file_url = full_url + "%2FSat_" + satellite + "%2F" + filename
         zip_path = os.path.join(out_folder, filename)
-        current_date = current_date + timedelta(days=1)
+        current_date = current_date + dt.timedelta(days=1)
         extract_folder = os.path.join(out_folder, date_str)
 
         # Find file if it already exists
@@ -132,7 +132,7 @@ def download_and_unzip(
             if response.status_code == 200:
                 with open(zip_path, 'wb') as f:
                     f.write(response.content)
-                print("Downloading: "+filename)
+                print("Downloading: " + filename)
 
                 # Unzip file into date folder
                 extract_folder = os.path.join(out_folder, date_str)

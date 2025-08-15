@@ -10,16 +10,16 @@
 # Latest update: 08/07/2025
 # Email alanahco@umich.edu
 
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import warnings
 
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import matplotlib.gridspec as gridspec
 
-from open_daily_files import open_daily
+from pyValEIA.open_daily_files import open_daily
 
 
 def clean_type(arr):
@@ -179,14 +179,14 @@ def Liemohn_Skill_Scores(event_states, coin=False):
     C = sum(event_states == 'C')
 
     if coin:  # LSS of a coin toss
-        coin_HM = H+M
-        coin_FC = F+C
+        coin_HM = H + M
+        coin_FC = F + C
 
         # HMFC of a coin is half of H+M for H and M and C+F for C and F
-        H = coin_HM/2
-        M = coin_HM/2
-        F = coin_FC/2
-        C = coin_FC/2
+        H = coin_HM / 2
+        M = coin_HM / 2
+        F = coin_FC / 2
+        C = coin_FC / 2
 
     # Liemohn Skill Score 1
     LSS1 = ((2 * H * C + M * C + H * F - H * M - M ** 2 - F ** 2 - F * C)
@@ -195,8 +195,8 @@ def Liemohn_Skill_Scores(event_states, coin=False):
     # Liemohn Skill Score 2 (LSS2t/LSS2b)
     LSS2t = (H * ((H + M) ** 2 + 2 * (H + M) * (F + C))
              - (H + M) ** 2 * (H + M + F))
-    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C)) -
-             (H + M) ** 2 * (H + M + F))
+    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C))
+             - (H + M) ** 2 * (H + M + F))
     LSS2 = LSS2t / LSS2b
 
     # Liemohn Skill Score 3
@@ -470,7 +470,7 @@ def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
             LSS1_mod2, LSS2_mod2, LSS3_mod2, LSS4_mod2 = Liemohn_Skill_Scores(
                 model2_sat['skill'].values, coin=False)
             LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin = Liemohn_Skill_Scores(
-                     model2_sat['skill'].values, coin=True)
+                model2_sat['skill'].values, coin=True)
 
             # MAkE LSS arrays
             LSS_mod1 = np.array([LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1])
@@ -538,8 +538,8 @@ def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                 ax.set_xlim([0, 1])
 
     # Add super title
-    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-' +
-                  date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
+    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-'
+                  + date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
                  fontsize=17)
     return fig
 
@@ -690,8 +690,8 @@ def one_model_LSS_plot_Swarm(model1, eia_type, date_range, model_name='Model',
                 ax.set_xlim([0, 1])
 
     # Add super title
-    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-' +
-                  date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
+    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-'
+                  + date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
                  fontsize=17)
     return fig
 
@@ -754,7 +754,7 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
         else:
             day_str = ''
         hist_ax.hist(lon_day, bins=hist_bins, color=colsh[0],
-                     alpha=0.5, label=look[0]+day_str+' LT')
+                     alpha=0.5, label=look[0] + day_str + ' LT')
 
         # Night
         lon_night = model_night['GLon']
@@ -764,7 +764,7 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
         else:
             night_str = ''
         hist_ax.hist(lon_night, bins=hist_bins, color=colsh[1],
-                     alpha=0.5, label=look[1]+night_str+' LT')
+                     alpha=0.5, label=look[1] + night_str + ' LT')
         hist_ax.set_xticklabels([])
 
     else:  # Day night not specified
@@ -974,7 +974,7 @@ def style_df_table(df_table, eia_type):
                               columns=df_table.columns[:len(df_table)])
     for l0 in ['Swarm A', 'Swarm B', 'Swarm C']:
         s.set_table_styles(
-            {(l0, 'Non-'+eia_type):
+            {(l0, 'Non-' + eia_type):
              [{'selector': '', 'props':
                'border-bottom: 2px solid black;'}],
              (l0, eia_type):
@@ -1025,7 +1025,7 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type,
                            (model_name, eia_type))] / Y_tot
         # miss (yes no)
         yn = df_table.loc[(('Swarm ' + s, eia_type),
-                           (model_name, 'Non-'+eia_type))] / Y_tot
+                           (model_name, 'Non-' + eia_type))] / Y_tot
 
         # correct negative (no no)
         nn = df_table.loc[(('Swarm ' + s, 'Non-' + eia_type),
@@ -1037,9 +1037,9 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type,
 
         # plot
         plt.text(yy, yy, s, fontsize=12, color=col)
-        plt.text(yn, -1*yn, s, fontsize=12, color=col)
-        plt.text(-1*nn, -1*nn, s, fontsize=12, color=col)
-        plt.text(-1*ny, ny, s, fontsize=12, color=col)
+        plt.text(yn, -yn, s, fontsize=12, color=col)
+        plt.text(-nn, -nn, s, fontsize=12, color=col)
+        plt.text(-ny, ny, s, fontsize=12, color=col)
 
     return fig
 
@@ -1121,8 +1121,8 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     # Add custom ticks as percentages
     custom_ticks = [-1, -0.5, 0, 0.5, 1]
     custom_labels = ['100%', '50%', '0%', '50%', '100%']
-    plt.yticks(custom_ticks, custom_labels, fontsize=fosi-3)
-    plt.xticks(custom_ticks, custom_labels, fontsize=fosi-3)
+    plt.yticks(custom_ticks, custom_labels, fontsize=fosi - 3)
+    plt.xticks(custom_ticks, custom_labels, fontsize=fosi - 3)
 
     # Add labels along axes, red (high is bad) blue (high is good)
     plt.text(0.4, -1.15, 'M/(H+M)', color='red')
@@ -1145,11 +1145,11 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     sec_ax = plt.twiny()
     sec_ticks = [0, 0.25, 0.5, 0.75, 1]
     sec_ax.set_ylim([-1, 1])
-    sec_ax.set_xticks(sec_ticks, custom_labels, fontsize=fosi-3)
+    sec_ax.set_xticks(sec_ticks, custom_labels, fontsize=fosi - 3)
 
     sec_ay = plt.twinx()
     sec_ay.set_ylim([-1, 1])
-    sec_ay.set_yticks(custom_ticks, custom_labels, fontsize=fosi-3)
+    sec_ay.set_yticks(custom_ticks, custom_labels, fontsize=fosi - 3)
 
     # Plot shaded regions indicating better than a coin toss
     plt.axhspan(0, 0.5, xmin=0.25, xmax=0.5, color='green', alpha=0.2, lw=0)

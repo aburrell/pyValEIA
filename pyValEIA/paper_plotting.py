@@ -7,23 +7,22 @@
 # Paper Plots
 
 # Single NIMO Swarm Plot for paper purposes
-
-import numpy as np
+from datetime import timedelta, datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from datetime import timedelta, datetime
+import matplotlib.ticker as mticker
+import numpy as np
 import os
 from pathlib import Path
 
-import pydarn
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import matplotlib.ticker as mticker
+import pydarn
 
-from EIA_type_detection import eia_complete
-from Load_Swarm2 import load_EFI as load_swrm
-from Load_NIMO2 import load_nimo, nimo_conjunction
-from NIMO_Swarm_Map_Plotting import find_all_gaps
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.Load_NIMO2 import load_nimo, nimo_conjunction
+from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
 def decHr_astime(LT):
@@ -299,9 +298,9 @@ def nimo_swarm_single_plot(
     format_latitude_labels(axs)
     # Change location of legend if it south in eia_type_slope
     if 'south' in eia_type_slope:
-        axs.legend(fontsize=fosi-3, loc='upper right')
+        axs.legend(fontsize=fosi - 3, loc='upper right')
     else:
-        axs.legend(fontsize=fosi-3, loc='upper left')
+        axs.legend(fontsize=fosi - 3, loc='upper left')
 
     ts1 = swarm_check['Time'].iloc[0].strftime('%H:%M')
     ts2 = swarm_check['Time'].iloc[-1].strftime('%H:%M')
@@ -370,9 +369,8 @@ def nimo_swarm_single_plot(
     ax.text(210, -50, 'Geographic Latitude', color='k', rotation=270)
     ax.text(-50, -110, 'Geographic Longitude', color='k')
 
-    ax.set_title('NIMO N$_m$F$_2$ at ' +
-                 nimo_swarm_alt['Time'].iloc[0][0].strftime('%H:%M') + 'UT',
-                 fontsize=fosi + 5)
+    ax.set_title('NIMO N$_m$F$_2$ at {:s} UT'.format(
+        nimo_swarm_alt['Time'].iloc[0][0].strftime('%H:%M')), fontsize=fosi + 5)
 
     cax = fig.add_subplot(gs[2:, 0], projection=ccrs.PlateCarree())
 

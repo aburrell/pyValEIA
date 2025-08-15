@@ -5,14 +5,14 @@
 # unlimited.
 # ----------------------------------------------------------------------------
 # NIMO Load
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import datetime as dt
+import glob
+import numpy as np
+import os
+import pandas as pd
+
 from apexpy import Apex
 from netCDF4 import Dataset
-import glob
-import os
 
 
 def compute_magnetic_coords(lat, lon, time):
@@ -39,7 +39,7 @@ def compute_magnetic_coords(lat, lon, time):
 
 
 def load_nimo(stime, fdir='/Users/aotoole/Documents/Python_Code/data/NIMO/*',
-              name_format='NIMO_AQ_%Y%j', ne_var='dene',  lon_var='lon',
+              name_format='NIMO_AQ_%Y%j', ne_var='dene', lon_var='lon',
               lat_var='lat', alt_var='alt', hr_var='hour', min_var='minute',
               tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
               time_cadence=15):
@@ -95,7 +95,8 @@ def load_nimo(stime, fdir='/Users/aotoole/Documents/Python_Code/data/NIMO/*',
     nimo_nmf2 = nimo_id.variables[nmf2_var][:]
     sday = stime.replace(hour=nimo_hr[0], minute=nimo_mins[0],
                          second=0, microsecond=0)
-    nimo_date_list = np.array([sday + dt.timedelta(minutes=(x-1)*time_cadence)
+    nimo_date_list = np.array([sday + dt.timedelta(minutes=(x - 1)
+                                                   * time_cadence)
                                for x in range(len(nimo_ne))])
     if np.sign(min(nimo_lat)) != -1:
         print("Warning: No Southern latitudes")
@@ -159,20 +160,20 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
 
     # If no time is between sw_time1 and sw_time2 look outside of range
     if len(nimo_time) == 0:
-        nimo_time = nimo_dc['time'][((nimo_dc['time'] >=
-                                      sw_time1-timedelta(minutes=5))
+        nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1
+                                      - dt.timedelta(minutes=5))
                                      & (nimo_dc['time'] <= sw_time2))]
         if len(nimo_time) == 0:
             nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1)
                                          & (nimo_dc['time']
                                             <= sw_time2
-                                            + timedelta(minutes=5)))]
+                                            + dt.timedelta(minutes=5)))]
     elif len(nimo_time) > 1:
         nimo_time = [nimo_time[0]]
 
     if len(nimo_time) == 0:
         nimo_time = min(nimo_dc['time'], key=lambda t: abs(sw_time1 - t))
-        if nimo_time-sw_time1 < timedelta(minutes=max_tdif):
+        if nimo_time - sw_time1 < dt.timedelta(minutes=max_tdif):
             nimo_time = [nimo_time]
         else:
             print(nimo_dc['time'][0])
@@ -226,10 +227,10 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     nimo_df['Ne'] = nimo_ne_return
     nimo_df['Mag_Lat'] = mlat[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
     nimo_df['Mag_Lon'] = mlon[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
-    nimo_df['alt'] = np.ones(len(nimo_ne_return))*nimo_dc['alt'][n_a]
-    nimo_df['Longitude'] = np.ones(len(nimo_ne_return))*nimo_lon_ch[0]
-    nimo_df['Latitude'] = nimo_dc['glat'][((mlat >= sw_mlat1) &
-                                           (mlat <= sw_mlat2))]
+    nimo_df['alt'] = np.ones(len(nimo_ne_return)) * nimo_dc['alt'][n_a]
+    nimo_df['Longitude'] = np.ones(len(nimo_ne_return)) * nimo_lon_ch[0]
+    nimo_df['Latitude'] = nimo_dc['glat'][((mlat >= sw_mlat1)
+                                           & (mlat <= sw_mlat2))]
 
     nimo_nmf2 = nimo_dc['nmf2'][n_t, :, :]
     nimo_lat = nimo_dc['glat']
@@ -267,21 +268,21 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20):
     # Get NIMO longitudes and time of conjunction
     nimo_lon_ch = nimo_dc['glon'][(abs(nimo_dc['glon'] - glon_val)
                                    == min(abs(nimo_dc['glon'] - glon_val)))]
-    nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime) &
-                                 (nimo_dc['time'] <= etime))]
+    nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime)
+                                 & (nimo_dc['time'] <= etime))]
     if len(nimo_time) == 0:
-        nimo_time = nimo_dc['time'][((nimo_dc['time'] >=
-                                      stime-timedelta(minutes=5))
+        nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime
+                                      - dt.timedelta(minutes=5))
                                      & (nimo_dc['time'] <= etime))]
         if len(nimo_time) == 0:
-            nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime) &
-                                         (nimo_dc['time'] <=
-                                          etime + timedelta(minutes=5)))]
+            nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime)
+                                         & (nimo_dc['time'] <= etime
+                                            + dt.timedelta(minutes=5)))]
     elif len(nimo_time) > 1:
         nimo_time = [nimo_time[0]]
     if len(nimo_time) == 0:
         nimo_time = min(nimo_dc['time'], key=lambda t: abs(stime - t))
-        if nimo_time-stime < timedelta(minutes=max_tdif):
+        if nimo_time - stime < dt.timedelta(minutes=max_tdif):
             nimo_time = [nimo_time]
         else:
             raise (ValueError

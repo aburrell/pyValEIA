@@ -9,13 +9,11 @@
 # EIA state detection using slopes between zero points
 # state definitions taken from Angeline code
 import numpy as np
-import math
 from scipy import stats
 
 
 def eia_complete(lat, density, den_str, filt='', interpolate=1,
-                 barrel_envelope=False,
-                 envelope_lower=0.6, envelope_upper=0.2,
+                 barrel_envelope=False, envelope_lower=0.6, envelope_upper=0.2,
                  barrel_radius=3, window_lat=3):
     """ Conduct full analysis of eia
     Parameters
@@ -74,7 +72,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
         'median_barrel'
     """
 
-    lat_span = int(max(lat)-min(lat))  # calculate lat_span
+    lat_span = int(max(lat) - min(lat))  # calculate lat_span
 
     # sort from south hemisphere to north hemisphere
     sort_in = np.argsort(lat)
@@ -83,7 +81,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
 
     if interpolate > 1:  # Interpolate if necessary
         lat_len = len(lat)
-        x_new = np.linspace(min(lat), max(lat), interpolate*lat_len)
+        x_new = np.linspace(min(lat), max(lat), interpolate * lat_len)
         y_new = np.interp(x_new, lat, density)
         lat_use = x_new
         den_use = np.array(y_new)
@@ -96,7 +94,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
     if ('barrel_' in filt) | (filt == 'barrel'):
 
         # scale down for barrel so x and y are on same scale
-        den_barrel = den_use/max(den_use)*lat_span
+        den_barrel = den_use / max(den_use) * lat_span
         den_filt_barrel = simple_barrel_roll(lat_use, den_barrel,
                                              barrel_radius,
                                              envelope=barrel_envelope,
@@ -111,7 +109,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
           | ('median_' in filt) | (filt == 'median')):
 
         # roughly window_lat degree smoothing window by converting to indices
-        window = int(np.round(abs(window_lat/np.median(np.diff(lat_use)))))
+        window = int(np.round(abs(window_lat / np.median(np.diff(lat_use)))))
 
         substring_to_remove = '_barrel'
         measure = filt.replace(substring_to_remove, "")
@@ -127,7 +125,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
     if ('_barrel' in filt):
 
         # scale down for barrel so x and y are on same scale
-        den_barrel = den_filt1/max(den_filt1)*lat_span
+        den_barrel = den_filt1 / max(den_filt1) * lat_span
         den_filt_barrel = simple_barrel_roll(lat_use, den_barrel,
                                              barrel_radius,
                                              envelope=barrel_envelope,
@@ -141,7 +139,7 @@ def eia_complete(lat, density, den_str, filt='', interpolate=1,
     elif ('_average' in filt) | (filt == '_median'):
 
         # roughly window_lat degree smoothing window by converting to indices
-        window = int(np.round(abs(window_lat/np.median(np.diff(lat_use)))))
+        window = int(np.round(abs(window_lat / np.median(np.diff(lat_use)))))
         substring_to_remove = 'barrel_'
         measure = filt.replace(substring_to_remove, "")
         filt_meas = rolling_nanmeasure(den_filt1, window, measure)
@@ -279,7 +277,7 @@ def set_dif_thresh(lat_span, percent=0.05):
     percent : kwarg double
         percent as a decimal for difference  threshold
     """
-    return percent*lat_span
+    return percent * lat_span
 
 
 def get_exponent(number):
@@ -294,7 +292,7 @@ def get_exponent(number):
     """
     if number == 0:
         return float('-inf')  # Or handle as appropriate for your use case
-    return math.floor(math.log10(abs(number)))
+    return np.floor(np.log10(abs(number)))
 
 
 def myround(x, base=5):
@@ -311,8 +309,10 @@ def myround(x, base=5):
     rounded array to nearest base
     """
     rounded_array = []
+
     for xx in x:
-        rounded_array.append(int(base * np.round(float(xx)/base)))
+        rounded_array.append(int(base * np.round(float(xx) / base)))
+
     return np.array(rounded_array)
 
 
@@ -419,7 +419,7 @@ def simple_barrel_roll(lat, ne, barrel_radius, envelope=True,
     # keep lookin for contact points
     while (j < len(ne) - 1):
         r_sc = barrel_radius
-        if j < len(ne)-1:
+        if j < len(ne) - 1:
 
             # Forward Rolling only
             f_con_xs .append(strt_con_x)
@@ -435,16 +435,16 @@ def simple_barrel_roll(lat, ne, barrel_radius, envelope=True,
 
             # iterate through x region of interest
             for i in range(len(x_roi)):
-                del_x = x_roi[i]-strt_con_x
-                del_y = y_roi[i]-strt_con_y
-                theta = math.atan(del_y/del_x)
-                if (2*r_sc) >= (((del_x) ** 2 + (del_y) ** 2) ** 0.5):
-                    beta = math.asin((((del_x) ** 2 + (del_y) ** 2) ** 0.5)
-                                     / (2 * r_sc))
+                del_x = x_roi[i] - strt_con_x
+                del_y = y_roi[i] - strt_con_y
+                theta = np.atan(del_y / del_x)
+                if (2 * r_sc) >= (((del_x) ** 2 + (del_y) ** 2) ** 0.5):
+                    beta = np.asin((((del_x) ** 2 + (del_y) ** 2) ** 0.5)
+                                   / (2 * r_sc))
                 else:
-                    beta = math.pi / 2
-                delta = beta-theta
-                deltas.append(delta * 180 / math.pi)
+                    beta = np.pi / 2
+                delta = beta - theta
+                deltas.append(delta * 180 / np.pi)
 
             if len(x_roi) != 0:
 
@@ -521,6 +521,7 @@ def evaluate_eia_gradient(lat, grad_dat, edge_lat=5):
     # Test input
     if len(grad_dat) != len(lat):
         raise ValueError('len(lat) != len(grad_dat)')
+
     # Get the locations of sign changes
     ichange = np.where(grad_sign[1:] != grad_sign[:-1])[0]
 
@@ -535,8 +536,8 @@ def evaluate_eia_gradient(lat, grad_dat, edge_lat=5):
     zero_lat = np.array(zero_lat)
 
     # Remove potential spurious peaks near the data edges
-    zero_lat = zero_lat[((zero_lat < lat.max() - edge_lat) &
-                         (zero_lat > lat.min() + edge_lat))]
+    zero_lat = zero_lat[((zero_lat < lat.max() - edge_lat)
+                         & (zero_lat > lat.min() + edge_lat))]
     return (zero_lat)
 
 
@@ -692,7 +693,7 @@ def flat_rules(p1, tec, lat):
 
             # fit a line to tec
             slope, intercept, rvalue, _, _ = stats.linregress(lat, tec)
-            tec_filt = slope*lat+intercept
+            tec_filt = slope * lat + intercept
 
             # detrend tec
             tec_detrend = tec - tec_filt
@@ -946,7 +947,7 @@ def third_peak(z_lat, tec, lat, ghost_check=False):
 
                     # if it is a peak, then add it in
                     if (zlope[0] > 0) & (zlope[1] < 0):
-                        zi = abs(lat-z_add).argmin()
+                        zi = abs(lat - z_add).argmin()
                         zmaxi = np.insert(zmaxi, 0, zi)
 
         elif max_lats[max_i] < 0:  # SOUTH, look in northern hemisphere
@@ -1046,18 +1047,18 @@ def ghost_check(z_lat_og, lat, tec):
                 tte = abs(pe - lat).argmin()
                 trn = tec[tte + 1:ttn].argmin()
                 trs = tec[tts + 1:tte].argmin()
-                pm = abs(lat-pe).argmin()
+                pm = abs(lat - pe).argmin()
 
                 # Check tec difference between each peak and trough
-                north_tec_check = abs(tec[ttn] - tec[tte+1:ttn][trn])
-                south_tec_check = abs(tec[tts] - tec[tts+1:tte][trs])
+                north_tec_check = abs(tec[ttn] - tec[tte + 1:ttn][trn])
+                south_tec_check = abs(tec[tts] - tec[tts + 1:tte][trs])
 
                 # calculate the span of the center based on the trough lats
                 eqn, ex = peak_span(pm, tec, lat,
-                                    trough_tec=tec[tte+1:ttn][trn],
+                                    trough_tec=tec[tte + 1:ttn][trn],
                                     trough_lat=lat[tte + 1:ttn][trn])
                 ex, eqs = peak_span(pm, tec, lat,
-                                    trough_tec=tec[tts+1:tte][trs],
+                                    trough_tec=tec[tts + 1:tte][trs],
                                     trough_lat=lat[tts + 1:tte][trs])
 
                 equator_check = False
@@ -1098,11 +1099,11 @@ def ghost_check(z_lat_og, lat, tec):
 
                 # caclualte span of each peak
                 nn, ns = peak_span(ttn, tec, lat,
-                                   trough_tec=tec[tts+1:ttn][tr],
-                                   trough_lat=tec[tts+1:ttn][tr])
+                                   trough_tec=tec[tts + 1:ttn][tr],
+                                   trough_lat=tec[tts + 1:ttn][tr])
                 sn, ss = peak_span(tts, tec, lat,
-                                   trough_tec=tec[tts+1:ttn][tr],
-                                   trough_lat=tec[tts+1:ttn][tr])
+                                   trough_tec=tec[tts + 1:ttn][tr],
+                                   trough_lat=tec[tts + 1:ttn][tr])
 
                 n_eq = False
                 s_eq = False
@@ -1277,16 +1278,16 @@ def peak_span(pm, tec, lat, trough_tec=-99, trough_lat=-99, div=0.5):
             t_base = p_tec * (32 - i) / 32
 
         else:  # from peak to trough tec
-            t_base = (p_tec-trough_tec)*(32-i)/32+trough_tec
+            t_base = (p_tec - trough_tec) * (32 - i) / 32 + trough_tec
 
         if np.any(north_tec < t_base):  # check for north tec below than t_base
             nex = 0
             j = 1
             while nex == 0:
-                if pm+j < len(tec):  # start at center point
+                if pm + j < len(tec):  # start at center point
                     tec_new = tec[pm + j]
                     if tec_new > t_base:
-                        j = j+1
+                        j += 1
                     else:
                         ngap.append(pm + j - 1)
                         nex = 1
@@ -1302,7 +1303,7 @@ def peak_span(pm, tec, lat, trough_tec=-99, trough_lat=-99, div=0.5):
                 if pm - j >= 0:
                     tec_new = tec[pm - j]
                     if tec_new > t_base:
-                        j = j+1
+                        j += 1
                     else:
                         sgap.append(pm - j + 1)
                         nex = 1
@@ -1510,7 +1511,7 @@ def find_maxima(zlope, ztec, ilocz):
     zmini = []
 
     # go through slopes
-    for s in range(len(zlope)-1):
+    for s in range(len(zlope) - 1):
 
         # positive to negative slope = local maximum
         if (zlope[s] > 0) and (zlope[s + 1] < 0):
@@ -1619,7 +1620,7 @@ def zero_max(lat, tec, zlats, maxes=[]):
                 tec_afe = tec_all[pe + 1]
                 tec_ate = tec_all[pe]
                 if (tec_ate > tec_b4e) & (tec_ate > tec_afe):  # if it's a peak
-                    p1 = abs(lat-lat_eq[te]).argmin()
+                    p1 = abs(lat - lat_eq[te]).argmin()
 
         # if p1 is still -99 after a south and center check,
         # check for secondary maximum
@@ -1636,7 +1637,7 @@ def zero_max(lat, tec, zlats, maxes=[]):
         tec_af = tec_all[pn + 1]
         tec_at = tec_all[pn]
         if (tec_at > tec_b4) & (tec_at > tec_af):  # if it is a peak
-            p2 = abs(lat-latz_north[tn]).argmin()
+            p2 = abs(lat - latz_north[tn]).argmin()
         else:  # check for center peak instead
             lat_eq = lat_all[(lat_all > -1) & (lat_all < 1)]
             tec_eq = tec_all[(lat_all > -1) & (lat_all < 1)]
@@ -1665,7 +1666,7 @@ def zero_max(lat, tec, zlats, maxes=[]):
     else:  # no current maxes, use a sinlge max
         if (p1 < 0) & (p2 < 0):
             t_last = tecz.argmax()
-            p1 = abs(lat-latz[t_last]).argmin()
+            p1 = abs(lat - latz[t_last]).argmin()
     return p1, p2
 
 

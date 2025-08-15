@@ -8,21 +8,23 @@
 # (between +/- some magnetic latitude)
 # and their NIMO counterparts 5 panels Swarm, NIMO Swarm Alt,
 # NIMO HMF2, NIMO Swarm alt + 100, NIMO NMF2 Map with swarm trajectory
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 from datetime import timedelta
-from pathlib import Path
-from scipy import stats
-import os
-import pydarn
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import AutoMinorLocator
-from Load_Swarm2 import load_EFI as load_swrm
-from EIA_type_detection import eia_complete
-from Load_NIMO2 import load_nimo, nimo_conjunction
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+import pandas as pd
+from scipy import stats
+import os
+
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import pydarn
+
+from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.Load_NIMO2 import load_nimo, nimo_conjunction
 
 
 def find_all_gaps(arr):
@@ -241,10 +243,10 @@ def NIMO_SWARM_mapplot(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load_swrm(sday-timedelta(days=1),
+                    sw_new = load_swrm(sday - timedelta(days=1),
                                        sday, sata, fdir=swarm_file_dir)
-                    sw_new['LT_hr'] = (sw_new['LT'].dt.hour +
-                                       sw['LT'].dt.minute / 60
+                    sw_new['LT_hr'] = (sw_new['LT'].dt.hour
+                                       + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
                     # limit data latitudinally
                     sw_lat_new = sw_new[(abs(sw_new['Mag_Lat']) <= MLat)]
@@ -351,8 +353,8 @@ def NIMO_SWARM_mapplot(
             if len(plats) > 0:
                 for pi, p in enumerate(plats):
                     lat_loc = (abs(p - swarm_check['Mag_Lat']).argmin())
-                    df_strl = 'Swarm_Peak_MLat'+str(pi+1)
-                    df_strn = 'Swarm_Peak_Ne'+str(pi+1)
+                    df_strl = 'Swarm_Peak_MLat' + str(pi + 1)
+                    df_strn = 'Swarm_Peak_Ne' + str(pi + 1)
                     df.at[f, df_strl] = swarm_check['Mag_Lat'].iloc[lat_loc]
                     df.at[f, df_strn] = swarm_check['Ne'].iloc[lat_loc]
                     if fig_on:
@@ -387,9 +389,9 @@ def NIMO_SWARM_mapplot(
 
                 # Change location of legend if it south in eia_type_slope
                 if 'south' in eia_type_slope:
-                    axs.legend(fontsize=fosi-3, loc='upper right')
+                    axs.legend(fontsize=fosi - 3, loc='upper right')
                 else:
-                    axs.legend(fontsize=fosi-3, loc='upper left')
+                    axs.legend(fontsize=fosi - 3, loc='upper left')
                 if sata == 'B':
                     axs.set_title('Swarm ' + sata + ' ' + str(511) + 'km')
                 else:
@@ -454,8 +456,8 @@ def NIMO_SWARM_mapplot(
                     df.at[f, 'Nimo_Max_MLat'] = max(nimo_swarm_alt["Mag_Lat"])
 
                 # save altitude specific information
-                df.at[f, base_str+'_Alt'] = int(nimo_swarm_alt["alt"].iloc[0])
-                df.at[f, base_str+'_Type'] = eia_type_slope
+                df.at[f, base_str + '_Alt'] = int(nimo_swarm_alt["alt"].iloc[0])
+                df.at[f, base_str + '_Type'] = eia_type_slope
 
                 # Plot NIMO
                 if fig_on:
@@ -490,8 +492,8 @@ def NIMO_SWARM_mapplot(
                     for pi, p in enumerate(p3):
                         lat_loc = (abs(p - nimo_swarm_alt['Mag_Lat']).argmin())
                         lat_plot = nimo_swarm_alt['Mag_Lat'].iloc[lat_loc]
-                        dl3 = base_str + '_Third_Peak_MLat' + str(pi+1)
-                        df_strn3 = base_str + '_Third_Peak_Ne' + str(pi+1)
+                        dl3 = base_str + '_Third_Peak_MLat' + str(pi + 1)
+                        df_strn3 = base_str + '_Third_Peak_Ne' + str(pi + 1)
                         df.at[f, dl3] = nimo_swarm_alt['Mag_Lat'].iloc[lat_loc]
                         df.at[f, df_strn3] = nimo_swarm_alt['Ne'].iloc[lat_loc]
                         if fig_on:
@@ -510,12 +512,11 @@ def NIMO_SWARM_mapplot(
                     axns.set_xlabel("Magnetic Latitude (\N{DEGREE SIGN})")
                     axns.set_ylabel("Ne (cm$^-3$)")
                     if 'south' in eia_type_slope:
-                        axns.legend(fontsize=fosi-3, loc='upper right')
+                        axns.legend(fontsize=fosi - 3, loc='upper right')
                     else:
-                        axns.legend(fontsize=fosi-3, loc='upper left')
-                    axns.set_title('NIMO ' +
-                                   str(int(nimo_swarm_alt['alt'].iloc[0])) +
-                                   'km')
+                        axns.legend(fontsize=fosi - 3, loc='upper left')
+                    axns.set_title('NIMO {:d} km'.format(
+                                   int(nimo_swarm_alt['alt'].iloc[0])))
             # Terminator and Map plotting
             if fig_on:
 
@@ -554,7 +555,7 @@ def NIMO_SWARM_mapplot(
                                         transform=ccrs.PlateCarree())
                 ax.plot(swarm_check['Longitude'], swarm_check['Latitude'],
                         color='white', label="Satellite Path")
-                ax.text(swarm_check['Longitude'].iloc[0]+1,
+                ax.text(swarm_check['Longitude'].iloc[0] + 1,
                         swarm_check['Latitude'].iloc[0], sata, color='white')
                 lons = np.squeeze(lons)
                 lats = np.squeeze(lats)
@@ -573,8 +574,8 @@ def NIMO_SWARM_mapplot(
                         color='k', rotation=90)
                 ax.text(-35, -105, 'Geographic Longitude (\N{DEGREE SIGN})',
                         color='k')
-                ax.set_title('NIMO NmF2 at ' +
-                             str(nimo_swarm_alt['Time'].iloc[0][0]))
+                ax.set_title('NIMO NmF2 at {:}'.format(
+                             nimo_swarm_alt['Time'].iloc[0][0]))
 
                 # Add vertical colorbar on the side
                 cbar = plt.colorbar(heatmap, ax=ax, orientation='vertical',
@@ -590,7 +591,7 @@ def NIMO_SWARM_mapplot(
 
                 plt.suptitle(str(int(nimo_swarm_alt['Longitude'].iloc[0]))
                              + ' GeoLon and ' + str(lt_plot) + ' LT',
-                             x=0.5, y=0.92, fontsize=fosi+10)
+                             x=0.5, y=0.92, fontsize=fosi + 10)
                 plt.rcParams.update({'font.size': fosi})
                 ts1 = swarm_check['Time'].iloc[0].strftime('%H%M')
                 ts2 = swarm_check['Time'].iloc[-1].strftime('%H%M')

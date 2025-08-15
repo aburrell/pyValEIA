@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
 
-from open_daily_files import open_daily
+from pyValEIA.open_daily_files import open_daily
 
 
 def clean_type(arr):
@@ -266,14 +266,14 @@ def Liemohn_Skill_Scores(event_states, coin=False):
     C = sum(event_states == 'C')
 
     if coin:  # LSS of a coin toss
-        coin_HM = H+M
-        coin_FC = F+C
+        coin_HM = H + M
+        coin_FC = F + C
 
         # HMFC of a coin is half of H+M for H and M and C+F for C and F
-        H = coin_HM/2
-        M = coin_HM/2
-        F = coin_FC/2
-        C = coin_FC/2
+        H = coin_HM / 2
+        M = coin_HM / 2
+        F = coin_FC / 2
+        C = coin_FC / 2
 
     # Liemohn Skill Score 1
     LSS1 = ((2 * H * C + M * C + H * F - H * M - M ** 2 - F ** 2 - F * C)
@@ -282,8 +282,8 @@ def Liemohn_Skill_Scores(event_states, coin=False):
     # Liemohn Skill Score 2 (LSS2t/LSS2b)
     LSS2t = (H * ((H + M) ** 2 + 2 * (H + M) * (F + C))
              - (H + M) ** 2 * (H + M + F))
-    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C)) -
-             (H + M) ** 2 * (H + M + F))
+    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C))
+             - (H + M) ** 2 * (H + M + F))
     LSS2 = LSS2t / LSS2b
 
     # Liemohn Skill Score 3
@@ -484,7 +484,7 @@ def Mad_LSS_plot(model1, eia_type, date_range, model_name='Model',
             ax.set_xlim([0, 1])
 
     # Add super title
-    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-' +
-                  date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
+    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-'
+                  + date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
                  fontsize=17)
     return fig

@@ -6,11 +6,11 @@
 # ----------------------------------------------------------------------------
 import numpy as np
 from datetime import timedelta
-from matplotlib.ticker import AutoMinorLocator
-from EIA_type_detection import eia_complete
-from Load_Swarm2 import load_EFI as load_swrm
-from NIMO_Swarm_Map_Plotting import find_all_gaps
 import matplotlib.ticker as mticker
+
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
 def format_latitude_labels(ax, xy='x'):
@@ -132,9 +132,9 @@ def swarm_panel(axs, stime, satellite, swarm_file_dir, MLat=30,
     # Ne scaling...
     if scale:
         if scale_by == 'max':
-            Ne_sc = swarm_check['Ne']/max(swarm_check['Ne'])
+            Ne_sc = swarm_check['Ne'] / max(swarm_check['Ne'])
         elif scale_by == 'num':
-            Ne_sc = swarm_check['Ne']/scale_num
+            Ne_sc = swarm_check['Ne'] / scale_num
     else:
         Ne_sc = swarm_check['Ne']
 
@@ -162,7 +162,7 @@ def swarm_panel(axs, stime, satellite, swarm_file_dir, MLat=30,
     axs.grid(axis='x')
     axs.set_xlim([min(swarm_check['Mag_Lat']), max(swarm_check['Mag_Lat'])])
     axs.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-    axs.xaxis.set_minor_locator(AutoMinorLocator())
+    axs.xaxis.set_minor_locator(mticker.AutoMinorLocator())
     axs.tick_params(axis='both', which='major', length=8)
     axs.tick_params(axis='both', which='minor', length=5)
 

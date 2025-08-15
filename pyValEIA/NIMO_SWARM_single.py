@@ -17,10 +17,10 @@ import pydarn
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-from EIA_type_detection import eia_complete
-from Load_Swarm2 import load_EFI as load_swrm
-from Load_NIMO2 import load_nimo, nimo_conjunction
-from NIMO_Swarm_Map_Plotting import find_all_gaps
+from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.Load_NIMO2 import load_nimo, nimo_conjunction
+from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
 def nimo_swarm_single_plot(
@@ -207,9 +207,9 @@ def nimo_swarm_single_plot(
 
     # Change location of legend if it south in eia_type_slope
     if 'south' in eia_type_slope:
-        axs.legend(fontsize=fosi-3, loc='upper right')
+        axs.legend(fontsize=fosi - 3, loc='upper right')
     else:
-        axs.legend(fontsize=fosi-3, loc='upper left')
+        axs.legend(fontsize=fosi - 3, loc='upper left')
     if satellite == 'B':
         axs.set_title('Swarm ' + satellite + ' ' + str(511) + 'km')
     else:
@@ -277,11 +277,11 @@ def nimo_swarm_single_plot(
             axns.set_ylabel("Ne")
 
         if 'south' in eia_type_slope:
-            axns.legend(fontsize=fosi-3, loc='upper right')
+            axns.legend(fontsize=fosi - 3, loc='upper right')
         else:
-            axns.legend(fontsize=fosi-3, loc='upper left')
-        axns.set_title('Nimo ' + str(int(nimo_swarm_alt['alt'].iloc[0]))
-                       + 'km')
+            axns.legend(fontsize=fosi - 3, loc='upper left')
+        axns.set_title('Nimo {:d} km'.format(
+            int(nimo_swarm_alt['alt'].iloc[0])))
 
     # ----------------- MAP PLOT --------------------
     # Set the date and time for the terminator
@@ -339,8 +339,8 @@ def nimo_swarm_single_plot(
     # Set labels
     ax.text(-220, -50, 'Geographic Latitude', color='k', rotation=90)
     ax.text(-50, -110, 'Geographic Longitude', color='k')
-    ax.set_title('NIMO N$_m$F$_2$ at '+str(nimo_swarm_alt['Time'].iloc[0][0]),
-                 fontsize=fosi + 5)
+    ax.set_title('NIMO N$_m$F$_2$ at {:}'.format(
+        nimo_swarm_alt['Time'].iloc[0][0]), fontsize=fosi + 5)
 
     # Add vertical colorbar on the side
     cbar = plt.colorbar(heatmap, ax=ax, orientation='vertical',
