@@ -1,0 +1,28 @@
+{
+    "license": {
+      "id": "lgpl"
+    },
+    "keywords": [
+  "validation",
+  "ionosphere",
+  "EIA",
+  "equatorial ionization anomally",
+  "equatorial ionisation anomally",
+  "heliophysics",
+    ],
+    "creators": [
+      {
+        "affiliation": "University of Michigan", 
+        "name": "Alanah Cardenas-O'Toole"
+      },
+      {
+        "orcid": "0000-0001-8875-9326", 
+        "affiliation": "Naval Research Laboratory", 
+        "name": "Angeline G. Burrell"
+      },
+      {
+        "affiliation": "Naval Research Laboratory", 
+        "name": "Dustin Hickey"
+      }
+    ]
+}
