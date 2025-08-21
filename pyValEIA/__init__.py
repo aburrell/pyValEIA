@@ -16,10 +16,8 @@ logging.raiseExceptions = False
 logger = logging.getLogger('pyValEIA_logger')
 
 # Import the package modules and top-level classes
-from pyValEIA import download_swarm  # noqa F401
 from pyValEIA import EIA_type_detection  # noqa F401
-from pyValEIA import Load_NIMO2  # noqa F401
-from pyValEIA import Load_Swarm2  # noqa F401
+from pyValEIA import io  # noqa F401
 from pyValEIA import Mad_Stats  # noqa F401
 from pyValEIA import Madrigal_NIMO2  # noqa F401
 from pyValEIA import NIMO_Swarm_Map_Plotting  # noqa F401
