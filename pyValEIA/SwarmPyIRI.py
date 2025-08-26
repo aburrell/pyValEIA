@@ -12,20 +12,14 @@ import os
 from pathlib import Path
 import pandas as pd
 
-from apexpy import Apex
 import PyIRI
 import PyIRI.edp_update as ml
 
 
 from pyValEIA.open_daily_files import open_daily
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
-
-
-def compute_magnetic_coords(lat, lon, time):
-    apex = Apex(date=time[0])
-    glat, glon = apex.convert(lat, lon, 'geo', 'qd')
-    return glat, glon
+from pyValEIA.io import load
+from pyValEIA.utils import coords
 
 
 def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
@@ -97,16 +91,15 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
     # Open Daily File
     daily_df = open_daily(asday, 'NIMO_SWARM', daily_dir)
     if fig_on:
-
         # Open Swarm Files for Plotting
-        swarm_dfA = load_swrm(asday, eday, 'A', swarm_dir)
-        swarm_dfB = load_swrm(asday, eday, 'B', swarm_dir)
-        swarm_dfC = load_swrm(asday, eday, 'C', swarm_dir)
+        swarm_dfA = load.load_swarm(asday, eday, 'A', swarm_dir)
+        swarm_dfB = load.load_swarm(asday, eday, 'B', swarm_dir)
+        swarm_dfC = load.load_swarm(asday, eday, 'C', swarm_dir)
 
         # Open Previous Day File if not already open
-        pre_swarm_dfA = load_swrm(pday, asday, 'A', swarm_dir)
-        pre_swarm_dfB = load_swrm(pday, asday, 'B', swarm_dir)
-        pre_swarm_dfC = load_swrm(pday, asday, 'C', swarm_dir)
+        pre_swarm_dfA = load.load_swarm(pday, asday, 'A', swarm_dir)
+        pre_swarm_dfB = load.load_swarm(pday, asday, 'B', swarm_dir)
+        pre_swarm_dfC = load.load_swarm(pday, asday, 'C', swarm_dir)
 
         swarm_A_full = pd.concat([pre_swarm_dfA, swarm_dfA], ignore_index=True)
         swarm_B_full = pd.concat([pre_swarm_dfB, swarm_dfB], ignore_index=True)
@@ -140,7 +133,7 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
         glon1 = nim_glon[i]
         alat = np.linspace(-90, 90, 181)
         alon = np.ones(len(alat)) * glon1
-        mlat, mlon = compute_magnetic_coords(alat, alon, [tim])
+        mlat, mlon = coords.compute_magnetic_coords(alat, alon, [tim])
 
         ahr = np.array([nim_decimal_hrs[i]])
         aalt = np.array([nim_alt[i]])
