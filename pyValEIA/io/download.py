@@ -20,7 +20,7 @@ swarm_url = "https://swarm-diss.eo.esa.int/?do=download&file=swarm%2FLevel"
 def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
                              level='1b', baseline='Latest_baselines',
                              instrument='EFI', dataset='LP',
-                             f_end='0602_MDR_EFI_LP', stime_str='000000',
+                             f_end='0602', stime_str='000000',
                              etime_str='235959', num_days=0, remove=False):
     """Download daily Swarm files and unzip them into instrument-date dirs.
 
@@ -48,9 +48,9 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
         (default='LP')
     f_end : str
         For different data products there are different numbers at the end
-        The most common for EFIxLP is '0602_MDR_EFI_LP' where '0602' represents
-        the file version and 'MDR_EFI_LP' represents the record type
-        (default='0602_MDR_EFI_LP')
+        The most common for EFIxLP is '0602' where '0602' represents
+        the file version. Other data products also have a record type string.
+        (default='0602')
     stime_str : str
         Starting time using the string format "HHMMSS". Most files start with
         "000000", but if the file is not the whole day it will be different.
@@ -86,7 +86,7 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
     mnth = ddate.month
     dy = ddate.day
     out_folder = os.path.join(out_dir, instrument, '_'.join(['Sat', satellite]),
-                              ddate.strptime('%Y'))
+                              ddate.strftime('%Y'))
 
     # Make the path if it does not exist
     if not os.path.exists(out_folder):
