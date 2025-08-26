@@ -84,7 +84,7 @@ def extract_cdf_time(cdf_data, time_var='Timestamp'):
 
 
 def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
-               dataset='LP', f_end='0602_MDR_EFI_LP'):
+               dataset='LP', f_end='0602'):
     """Load Swarm data, downloading any missing files.
 
     Parameters
@@ -105,9 +105,9 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
         (default='LP')
     f_end : str
         For different data products there are different numbers at the end
-        The most common for EFIxLP is '0602_MDR_EFI_LP' where '0602' represents
-        the file version and 'MDR_EFI_LP' represents the record type
-        (default='0602_MDR_EFI_LP')
+        The most common for EFIxLP is '0602' where '0602' represents
+        the file version. Other datasets may also have a string that represents
+        the record type (default='0602')
 
     Returns
     -------
@@ -129,10 +129,14 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
     if dataset not in variables.keys():
         raise ValueError('unknown Swarm dataset.')
-
+    
     time_var = variables[dataset][0]
     lat_var = variables[dataset][1]
     lon_var = variables[dataset][2]
+
+    # Set variables to be renamed
+    rename = {'LP': {'Flags_Ne': 'Ne_flag', 'Flags_Te': 'Te_flag',
+                     'Flags_LP': 'LP_flag'}}
 
     # Initalize the output
     swarm_data = pd.DataFrame()
@@ -178,8 +182,7 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
             data, cdf_data = load_cdf_data(filename, variables[dataset][1:])
 
             # Load the time as an array of datetime objects
-            data['Time'] = extract_cdf_time(cdf_data,
-                                            time_var=data[time_var][0])
+            data['Time'] = extract_cdf_time(cdf_data, time_var=time_var)
 
             # Get the additional coordinates
             data['Mag_Lat'], data['Mag_Lon'] = coords.compute_magnetic_coords(
@@ -193,12 +196,15 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
                 swarm_data = pd.concat([swarm_data, pd.DataFrame(data)])
 
         # Cycle to the next day
-        file_date += dt.datetime(days=1)
+        file_date += dt.timedelta(days=1)
 
     # Trim the DataFrame to the desired time range
     if not swarm_data.empty:
         swarm_data = swarm_data[(swarm_data['Time'] >= start_date)
                                 & (swarm_data['Time'] < end_date)]
+
+        if dataset in rename.keys():
+            swarm_data = swarm_data.rename(columns=rename[dataset])
 
     return swarm_data
 
