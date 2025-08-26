@@ -128,7 +128,7 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
 
     # Compute NIMO in magnetic coordinates
     mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
-                                                nimo_lon_ls, nimo_time)
+                                                nimo_lon_ls, nimo_time[0])
 
     # Max and min of Swarm magnetic lats
     sw_mlat1 = min(swarm_check['Mag_Lat'])
@@ -225,7 +225,7 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20,
     # Convert geo to mag coor
     nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
     mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
-                                                nimo_lon_ls, nimo_time)
+                                                nimo_lon_ls, nimo_time[0])
 
     mlat1 = -1 * abs(mlat_val)
     mlat2 = abs(mlat_val)
