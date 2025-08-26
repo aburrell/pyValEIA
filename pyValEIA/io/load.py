@@ -276,7 +276,8 @@ def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
                                     stime.strftime('%d-%b-%Y'), ', disgarding ',
                                     '{:}'.format(fil[1:])]))
     else:
-        raise ValueError('No NIMO file found for {:}'.format(stime))
+        raise ValueError('No NIMO file found for {:} at {:}'.format(
+            stime, fname))
 
     # Test the input variable keys
     for var in [ne_var, tec_var, hmf2_var, hmf2_var, lon_var, lat_var, alt_var,
