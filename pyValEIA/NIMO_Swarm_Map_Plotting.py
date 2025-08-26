@@ -24,7 +24,7 @@ import pydarn
 
 from pyValEIA.io import load
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA import nimo_conjunction
+from pyValEIA import nimo_conjunctions
 
 
 def find_all_gaps(arr):
@@ -428,7 +428,7 @@ def NIMO_SWARM_mapplot(
                 # max_tdif of Swarm time
                 try:
                     (nimo_swarm_alt,
-                     nimo_map) = nimo_conjunction.nimo_conjunction(
+                     nimo_map) = nimo_conjunctions.nimo_conjunction(
                          nimo_dc, swarm_check, alt_str, inc=inc_arr[i],
                          max_tdif=max_tdif)
                 except RuntimeError:

@@ -19,7 +19,7 @@ import cartopy.feature as cfeature
 
 from pyValEIA.EIA_type_detection import eia_complete
 from pyValEIA.io import load
-from pyValEIA import nimo_conjunction
+from pyValEIA import nimo_conjunctions
 from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
@@ -227,7 +227,7 @@ def nimo_swarm_single_plot(
 
         # Choose an altitude for NIMO
         alt_str = alt_arr[i]  # Go through through Altitudes
-        nimo_swarm_alt, nimo_map = nimo_conjunction.nimo_conjunction(
+        nimo_swarm_alt, nimo_map = nimo_conjunctions.nimo_conjunction(
             nimo_dc, swarm_check, alt_str, inc=inc_arr[i])
         nlat_use = nimo_swarm_alt['Mag_Lat'].values
         density = nimo_swarm_alt['Ne'].values

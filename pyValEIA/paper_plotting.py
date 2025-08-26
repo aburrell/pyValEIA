@@ -267,7 +267,7 @@ def nimo_swarm_single_plot(
 
     # Add NIMO Panel
     # Go through through Altitudes
-    nimo_swarm_alt, nimo_map = nimo_conjunction.nimo_conjunction(
+    nimo_swarm_alt, nimo_map = nimo_conjunctions.nimo_conjunction(
         nimo_dc, swarm_check, satellite, inc=0)
     nlat_use = nimo_swarm_alt['Mag_Lat'].values
     density = nimo_swarm_alt['Ne'].values

@@ -15,9 +15,9 @@ import pandas as pd
 import cdflib
 from netCDF4 import Dataset
 
-from pyEIAVal import logger
-from pyEIAVal.io.download import download_and_unzip_swarm
-from pyEIAVal.utils import coords
+from pyValEIA import logger
+from pyValEIA.io.download import download_and_unzip_swarm
+from pyValEIA.utils import coords
 
 
 def load_cdf_data(file_path, variable_names):

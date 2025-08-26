@@ -22,7 +22,7 @@ import pydarn
 from pyValEIA.EIA_type_detection import eia_complete
 from pyValEIA.io import load
 from pyValEIA.utils import coords
-from pyValEIA import nimo_conjunction
+from pyValEIA import nimo_conjunctions
 
 
 def longitude_to_local_time(longitude, utc_time):
@@ -380,7 +380,7 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
 
         # get nimo data ------------------------------------------------
         glon_val = (lon_max + lon_min) / 2
-        nimo_df, nimo_map = nimo_conjunction.nimo_mad_conjunction(
+        nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
             nimo_dc, mlat_val, glon_val, stime)
 
         # Add legend as first panel
@@ -646,7 +646,7 @@ def NIMO_MAD_DailyFile(
             # get nimo and conjunction
             glon_val = (lon_max + lon_min) / 2
             try:
-                nimo_df, nimo_map = nimo_conjunction.nimo_mad_conjunction(
+                nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
                     nimo_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
             except ValueError:
                 continue
