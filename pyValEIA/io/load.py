@@ -256,6 +256,8 @@ def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
     ------
     ValueError
         If no NIMO file could be found at the specified location and time
+    KeyError
+        If an unexpected variable is supplied
 
     """
     # Use the time to format the file name
@@ -275,6 +277,13 @@ def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
                                     '{:}'.format(fil[1:])]))
     else:
         raise ValueError('No NIMO file found for {:}'.format(stime))
+
+    # Test the input variable keys
+    for var in [ne_var, tec_var, hmf2_var, hmf2_var, lon_var, lat_var, alt_var,
+                hr_var]:
+        if var not in nimo_id.variables.keys():
+            raise KeyError('Bad input variable {:} not in {:}'.format(
+                repr(var), nimo_id.variables.keys()))
 
     # Retrieve the desired density variables
     nimo_ne = nimo_id.variables[ne_var][:]
