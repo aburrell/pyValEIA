@@ -133,7 +133,7 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
         glon1 = nim_glon[i]
         alat = np.linspace(-90, 90, 181)
         alon = np.ones(len(alat)) * glon1
-        mlat, mlon = coords.compute_magnetic_coords(alat, alon, [tim])
+        mlat, mlon = coords.compute_magnetic_coords(alat, alon, tim)
 
         ahr = np.array([nim_decimal_hrs[i]])
         aalt = np.array([nim_alt[i]])
