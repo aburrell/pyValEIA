@@ -9,7 +9,7 @@ from datetime import timedelta
 import matplotlib.ticker as mticker
 
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.io import load
 from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
@@ -87,7 +87,7 @@ def swarm_panel(axs, stime, satellite, swarm_file_dir, MLat=30,
     eday = sday + timedelta(days=1)
 
     # Get full day of Swarm Data
-    swarm_df = load_swrm(sday, eday, satellite, fdir=swarm_file_dir)
+    swarm_df = load.load_swarm(sday, eday, satellite, swarm_file_dir)
 
     # Housekeeping
     swarm_df['LT_hr'] = swarm_df['LT'].dt.hour + swarm_df['LT'].dt.minute / 60
