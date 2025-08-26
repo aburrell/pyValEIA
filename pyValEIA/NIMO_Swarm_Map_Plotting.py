@@ -29,7 +29,7 @@ from pyValEIA import nimo_conjunction
 
 def find_all_gaps(arr):
     """Find gap indices.
-    
+
     Parameters
     ----------
     arr : array-like
