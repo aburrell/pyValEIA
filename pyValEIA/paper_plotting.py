@@ -20,8 +20,8 @@ import cartopy.feature as cfeature
 import pydarn
 
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
-from pyValEIA.Load_NIMO2 import load_nimo, nimo_conjunction
+from pyValEIA.io import load
+from pyValEIA import nimo_conjunctions
 from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
@@ -162,7 +162,7 @@ def nimo_swarm_single_plot(
     eday = sday + timedelta(days=1)
 
     # Get full day of Swarm Data
-    swarm_df = load_swrm(sday, eday, satellite, fdir=swarm_file_dir)
+    swarm_df = load.load_swarm(sday, eday, satellite, swarm_file_dir)
 
     # Housekeeping: get rid of bad values by flag.
     # \https://earth.esa.int/eogateway/documents/20142/37627/Swarm-Level-1b-
@@ -204,12 +204,11 @@ def nimo_swarm_single_plot(
     swarm_check = sw_lat[gaps[g1]:gaps[g2]]
 
     # Get NIMO Dictionary
-    nimo_dc = load_nimo(stime, fdir=nimo_file_dir,
-                        name_format=nimo_name_format,
-                        ne_var=ne_var, lon_var=lon_var, lat_var=lat_var,
-                        alt_var=alt_var, hr_var=hr_var, min_var=min_var,
-                        tec_var=tec_var, hmf2_var=hmf2_var, nmf2_var=nmf2_var,
-                        time_cadence=nimo_cadence)
+    nimo_dc = load.load_nimo(
+        stime, nimo_file_dir, name_format=nimo_name_format, ne_var=ne_var,
+        lon_var=lon_var, lat_var=lat_var, alt_var=alt_var, hr_var=hr_var,
+        min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var, nmf2_var=nmf2_var,
+        time_cadence=nimo_cadence)
 
     # Evaluate Swarm EIA-------------------------------------------------
     slat_use = swarm_check['Mag_Lat'].values
@@ -268,7 +267,7 @@ def nimo_swarm_single_plot(
 
     # Add NIMO Panel
     # Go through through Altitudes
-    nimo_swarm_alt, nimo_map = nimo_conjunction(
+    nimo_swarm_alt, nimo_map = nimo_conjunctions.nimo_conjunction(
         nimo_dc, swarm_check, satellite, inc=0)
     nlat_use = nimo_swarm_alt['Mag_Lat'].values
     density = nimo_swarm_alt['Ne'].values

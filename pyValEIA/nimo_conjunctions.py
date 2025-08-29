@@ -4,142 +4,64 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
-# NIMO Load
+"""NIMO conjunction functions."""
+
 import datetime as dt
-import glob
 import numpy as np
-import os
 import pandas as pd
 
-from apexpy import Apex
-from netCDF4 import Dataset
+from pyValEIA.utils import coords
 
 
-def compute_magnetic_coords(lat, lon, time):
-    """ compute magnetic coordinates from geographic
+def set_swarm_alt(sat_id):
+    """Set the Swarm satellite altitude.
 
     Parameters
     ----------
-    lat : array-like
-        latitudes
-    lon : array-like
-        longitudes
-    time : array-like
-        time
+    sat_id : str
+        Satellite ID, expects one of 'A', 'B', or 'C'
+
     Returns
     -------
-    mlat : array-like
-        magnetic latitude
-    mlon : array-like
-        magnetic longitude
+    sat_alt : float
+        Satellite altitude in km
+
     """
-    apex = Apex(date=time[0])
-    mlat, mlon = apex.convert(lat, lon, 'geo', 'qd')
-    return mlat, mlon
+    sat_alt = 511.0 if sat_id == 'B' else 462.0
 
-
-def load_nimo(stime, fdir='/Users/aotoole/Documents/Python_Code/data/NIMO/*',
-              name_format='NIMO_AQ_%Y%j', ne_var='dene', lon_var='lon',
-              lat_var='lat', alt_var='alt', hr_var='hour', min_var='minute',
-              tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
-              time_cadence=15):
-    """ Load NIMO day
-    Parameters
-    ----------
-    stime : datetime
-        day of desired NIMO run
-    fdir : str kwarg
-        file directory
-    name_format : str kwarg
-        format of NIMO file name including date format before .nc
-        Default: 'NIMO_AQ_%Y%j'
-    *_var : str kwarg
-        variable names to be opened in the file
-        defaults
-        --------
-        electron density - 'dene'
-        geo longitude - 'lon'
-        geo latitude - 'lat'
-        altitude - 'alt'
-        hour - 'hour'
-        minute - 'minute'
-        TEC - 'tec'
-        hmf2 - 'hmf2'
-        nmf2 - 'nmf2'
-    time_cadence: int kwarg
-        time cadence of data in minutes
-        default is 15 minutes
-    Returns
-    -------
-    nimo_dc : dictionary
-        dictionary with variables: dene,lon,lat,alt,hour,minute,date, tec,hmf2
-    """
-    fil_str = stime.strftime(name_format)
-    name_str = f"{fil_str}.nc"
-    fname = os.path.join(fdir, name_str)
-    fil = glob.glob(fname)[0]
-    nimo_id = Dataset(fil)
-    nimo_ne = nimo_id.variables[ne_var][:]
-    nimo_lon = nimo_id.variables[lon_var][:]
-    nimo_lat = nimo_id.variables[lat_var][:]
-    nimo_alt = nimo_id.variables[alt_var][:]
-    nimo_hr = nimo_id.variables[hr_var][:]
-    if min_var in nimo_id.variables.keys():
-        nimo_mins = nimo_id.variables[min_var][:]
-    else:
-        print('Warning: No minute variable, Treating hour as fractional hours')
-        nimo_mins = np.array([(h % 1) * 60 for h in nimo_hr]).astype(int)
-        nimo_hr = np.array([int(h) for h in nimo_hr])
-    nimo_tec = nimo_id.variables[tec_var][:]
-    nimo_hmf2 = nimo_id.variables[hmf2_var][:]
-    nimo_nmf2 = nimo_id.variables[nmf2_var][:]
-    sday = stime.replace(hour=nimo_hr[0], minute=nimo_mins[0],
-                         second=0, microsecond=0)
-    nimo_date_list = np.array([sday + dt.timedelta(minutes=(x - 1)
-                                                   * time_cadence)
-                               for x in range(len(nimo_ne))])
-    if np.sign(min(nimo_lat)) != -1:
-        print("Warning: No Southern latitudes")
-    elif np.sign(max(nimo_lat)) != 1:
-        print("Warning: No Northern latitudes")
-
-    nimo_dc = {
-        'time': nimo_date_list, 'dene': nimo_ne, 'glon': nimo_lon,
-        'glat': nimo_lat, 'alt': nimo_alt,
-        'hour': nimo_hr, 'minute': nimo_mins, 'tec': nimo_tec,
-        'hmf2': nimo_hmf2, 'nmf2': nimo_nmf2
-    }
-    return nimo_dc
+    return sat_alt
 
 
 def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
-    """ Find conjunction between NIMO and swarm
+    """Find conjunctions between NIMO and Swarm.
 
     Parameters
     ----------
-    nimo_dc : dictionary
-        dictionary of NIMO data
-    swarm_check : dataframe
-        dataframe of swarm data
+    nimo_dc : dict
+        Dictionary of NIMO data
+    swarm_check : pd.DataFrame
+        DataFrame of Swarm data
     alt_str: str kwarg
-        'A', 'B', 'C' or 'hmf2' (defualt) for altitude
-    inc : int kwarg
-        increase altitude by inc defulat is 0
+        'A', 'B', 'C' or 'hmf2' for altitude (default='hmf2')
+    inc : int
+        Increase altitude by specified incriment in km (default=0)
     max_tdif : double nkwarg
-        maximum time distance (in minutes) between a NIMO and Swarm
-        conjunction allowed (default 15)
+        Maximum time distance (in minutes) between a NIMO and Swarm
+        conjunction allowed (default=15)
 
     Returns
     -------
-    nimo_df : DataFrame
+    nimo_df : pd.DataFrame
         NIMO data at Swarm location/time
-    nimo_map : Dictionary
-        Dictionary of NmF2, geo lon, and geo lat
-        All 2D arrays for a map plot
+    nimo_map : dict
+        Dictionary of 2D arrays of NmF2, geo lon, and geo lat prepared for
+        map plots
+
     Raises
     ------
-    Value error if NIMO time and starting Swarm time are more than 15 minutes
-        apart
+    ValueError
+        If NIMO time and starting Swarm time are more than `max_tdif` apart
+
     """
     # Define the start and end times for Swarm during the conjunction
     sw_time1 = swarm_check["Time"].iloc[0]
@@ -205,8 +127,8 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
 
     # Compute NIMO in magnetic coordinates
-    mlat, mlon = compute_magnetic_coords(nimo_dc['glat'],
-                                         nimo_lon_ls, nimo_time)
+    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
+                                                nimo_lon_ls, nimo_time[0])
 
     # Max and min of Swarm magnetic lats
     sw_mlat1 = min(swarm_check['Mag_Lat'])
@@ -241,29 +163,35 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     return nimo_df, nimo_map
 
 
-def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20):
-    """ Find conjunction between NIMO and Madrigal
+def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20,
+                         mad_tres=5):
+    """Find conjunctions between NIMO and Madrigal data.
+
     Parameters
     ----------
-    nimo_dc : dictionary
-        dictionary of NIMO data
+    nimo_dc : dict
+        Dictionary of NIMO data
     mlat_val : double
         +/- magnetic latitude
     glon_val : double
-        geographic longitude of conjunction
-    stime : Datetime
-        datetime for conjunction
+        Geographic longitude of conjunction
+    stime : dt.datetime
+        Datetime for conjunction
+    max_tdif : int
+        Maximum time difference in minutes (default=20)
+    mad_tres : int
+        Time resolution of the Madrigal TEC data in minutes (default=5)
 
     Returns
     -------
-    nimo_df : DataFrame
+    nimo_df : pd.DataFrame
         NIMO data at Madrigal location/time
-    nimo_map : Dictionary
-        Dictionary of TEC, geo lon, and geo lat
-        All 2D arrays for a map plot
+    nimo_map : dict
+        Dictionary of 2D arrays of TEC, geo lon, and geo lat for map plots
+
     """
     # 15 minute time range
-    etime = stime + dt.timedelta(minutes=15)
+    etime = stime + dt.timedelta(minutes=max_tdif)
 
     # Get NIMO longitudes and time of conjunction
     nimo_lon_ch = nimo_dc['glon'][(abs(nimo_dc['glon'] - glon_val)
@@ -272,12 +200,12 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20):
                                  & (nimo_dc['time'] <= etime))]
     if len(nimo_time) == 0:
         nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime
-                                      - dt.timedelta(minutes=5))
+                                      - dt.timedelta(minutes=mad_tres))
                                      & (nimo_dc['time'] <= etime))]
         if len(nimo_time) == 0:
             nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime)
                                          & (nimo_dc['time'] <= etime
-                                            + dt.timedelta(minutes=5)))]
+                                            + dt.timedelta(minutes=mad_tres)))]
     elif len(nimo_time) > 1:
         nimo_time = [nimo_time[0]]
     if len(nimo_time) == 0:
@@ -296,8 +224,8 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20):
     nimo_tec_lat_all = nimo_dc['tec'][n_t, :, n_l]
     # Convert geo to mag coor
     nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
-    mlat, mlon = compute_magnetic_coords(nimo_dc['glat'],
-                                         nimo_lon_ls, nimo_time)
+    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
+                                                nimo_lon_ls, nimo_time[0])
 
     mlat1 = -1 * abs(mlat_val)
     mlat2 = abs(mlat_val)
@@ -321,4 +249,5 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20):
     nimo_map = {
         'tec': nimo_nmf2, 'glon': nimo_lon, 'glat': nimo_lat
     }
+
     return nimo_df, nimo_map

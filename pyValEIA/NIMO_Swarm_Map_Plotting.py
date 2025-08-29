@@ -22,23 +22,29 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import pydarn
 
-from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.io import load
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.Load_NIMO2 import load_nimo, nimo_conjunction
+from pyValEIA import nimo_conjunctions
 
 
 def find_all_gaps(arr):
-    """ find gap indices
-    e.g. in an array 2,3,5,6,7,8
-    find_all_gaps will return index 1 where the gap starts
+    """Find gap indices.
+
     Parameters
     ----------
     arr : array-like
-        array of indices
+        Array of indices
+
     Returns
-    gap_indices : array-like
-        indices of gap start and end
     -------
+    gap_indices : array-like
+        Indices of gap start and end
+
+    Notes
+    -----
+    For example, in an array of `arr=[2,3,5,6,7,8]`, this function will return
+    `gap_inds=[1]` to indicate where the gap starts.
+
     """
     gap_indices = []
     # Iterate through the array and find where the gaps start
@@ -184,18 +190,17 @@ def NIMO_SWARM_mapplot(
     f = -1
 
     # Get nimo dictionary for whole day
-    nimo_dc = load_nimo(start_day, fdir=nimo_file_dir,
-                        name_format=nimo_name_format, ne_var=ne_var,
-                        lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
-                        hr_var=hr_var, min_var=min_var, tec_var=tec_var,
-                        hmf2_var=hmf2_var, nmf2_var=nmf2_var,
-                        time_cadence=nimo_cadence)
+    nimo_dc = load.load_nimo(
+        start_day, nimo_file_dir, name_format=nimo_name_format, ne_var=ne_var,
+        lon_var=lon_var, lat_var=lat_var, alt_var=alt_var, hr_var=hr_var,
+        min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var, nmf2_var=nmf2_var,
+        time_cadence=nimo_cadence)
 
     # Iterate through satellites
     for sa, sata in enumerate(Satellites):
 
         # Load Swarm Data for day per satellite
-        sw = load_swrm(sday, end_day, sata, fdir=swarm_file_dir)
+        sw = load.load_swarm(sday, end_day, sata, swarm_file_dir)
 
         # If satellite data is not available, move onto next one
         if len(sw) == 0:
@@ -243,8 +248,8 @@ def NIMO_SWARM_mapplot(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load_swrm(sday - timedelta(days=1),
-                                       sday, sata, fdir=swarm_file_dir)
+                    sw_new = load.load_swarm(sday - timedelta(days=1),
+                                             sday, sata, swarm_file_dir)
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
@@ -422,9 +427,10 @@ def NIMO_SWARM_mapplot(
                 # RuntimeError for nimo_conjunction if no NIMO data within
                 # max_tdif of Swarm time
                 try:
-                    nimo_swarm_alt, nimo_map = nimo_conjunction(
-                        nimo_dc, swarm_check, alt_str, inc=inc_arr[i],
-                        max_tdif=max_tdif)
+                    (nimo_swarm_alt,
+                     nimo_map) = nimo_conjunctions.nimo_conjunction(
+                         nimo_dc, swarm_check, alt_str, inc=inc_arr[i],
+                         max_tdif=max_tdif)
                 except RuntimeError:
                     continue
 

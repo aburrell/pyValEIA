@@ -27,7 +27,7 @@ import cartopy.feature as cfeature
 from netCDF4 import Dataset
 import pydarn
 
-from pyValEIA.Load_Swarm2 import load_EFI as load_swrm
+from pyValEIA.io import load
 from pyValEIA.EIA_type_detection import eia_complete
 
 
@@ -430,7 +430,7 @@ def NIMO_SWARM_mapplot_offset(
     for sa, sata in enumerate(Satellites):
 
         # Load Swarm Data for day per satellite
-        sw = load_swrm(sday, end_day, sata, fdir=swarm_file_dir)
+        sw = load.load_swarm(sday, end_day, sata, swarm_file_dir)
 
         # If satellite data is not available, move onto next one
         if len(sw) == 0:
@@ -478,8 +478,8 @@ def NIMO_SWARM_mapplot_offset(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load_swrm(sday - dt.timedelta(days=1),
-                                       sday, sata, fdir=swarm_file_dir)
+                    sw_new = load.load_swarm(sday - dt.timedelta(days=1),
+                                             sday, sata, swarm_file_dir)
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)

@@ -20,7 +20,9 @@ from netCDF4 import Dataset
 import pydarn
 
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA import Load_NIMO2
+from pyValEIA.io import load
+from pyValEIA.utils import coords
+from pyValEIA import nimo_conjunctions
 
 
 def longitude_to_local_time(longitude, utc_time):
@@ -342,8 +344,8 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
 
         # compute magnetic latitude
         mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
-        mad_mlat, mad_mlon = Load_NIMO2.compute_magnetic_coords(
-            mad_dc['glat'], mad_lon_ls, [mad_dc['time'][mt]])
+        mad_mlat, mad_mlon = coords.compute_magnetic_coords(
+            mad_dc['glat'], mad_lon_ls, mad_dc['time'][mt])
 
         # tec and dtec values by time
         mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
@@ -378,8 +380,8 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
 
         # get nimo data ------------------------------------------------
         glon_val = (lon_max + lon_min) / 2
-        nimo_df, nimo_map = Load_NIMO2.nimo_mad_conjunction(nimo_dc, mlat_val,
-                                                            glon_val, stime)
+        nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
+            nimo_dc, mlat_val, glon_val, stime)
 
         # Add legend as first panel
         if i == 0:
@@ -580,7 +582,7 @@ def NIMO_MAD_DailyFile(
     df = pd.DataFrame(columns=columns)
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
     mad_dc = load_madrigal(sday, mad_file_dir)
-    nimo_dc = Load_NIMO2.load_nimo(
+    nimo_dc = load.load_nimo(
         start_day, fdir=nimo_file_dir, name_format=nimo_name_format,
         ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
         hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
@@ -606,8 +608,8 @@ def NIMO_MAD_DailyFile(
 
             # compute magnetic latitude
             mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
-            mad_mlat, mad_mlon = Load_NIMO2.compute_magnetic_coords(
-                mad_dc['glat'], mad_lon_ls, [mad_dc['time'][mt]])
+            mad_mlat, mad_mlon = coords.compute_magnetic_coords(
+                mad_dc['glat'], mad_lon_ls, mad_dc['time'][mt])
 
             # tec and dtec values by time
             mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
@@ -644,7 +646,7 @@ def NIMO_MAD_DailyFile(
             # get nimo and conjunction
             glon_val = (lon_max + lon_min) / 2
             try:
-                nimo_df, nimo_map = Load_NIMO2.nimo_mad_conjunction(
+                nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
                     nimo_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
             except ValueError:
                 continue
