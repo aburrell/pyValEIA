@@ -28,7 +28,7 @@ import pydarn
 
 from pyValEIA import io
 from pyValEIA.utils import coords
-from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.utils.EIA_type_detection import eia_complete
 
 
 def load_nimo_offset(

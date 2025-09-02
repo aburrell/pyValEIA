@@ -15,10 +15,9 @@ import pandas as pd
 import PyIRI
 import PyIRI.edp_update as ml
 
-
-from pyValEIA.EIA_type_detection import eia_complete
 from pyValEIA import io
 from pyValEIA.utils import coords
+from pyValEIA.utils.EIA_type_detection import eia_complete
 
 
 def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,

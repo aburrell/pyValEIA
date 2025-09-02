@@ -13,14 +13,14 @@ from datetime import timedelta
 import os
 from pathlib import Path
 
-import pydarn
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import pydarn
 
-from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.utils.EIA_type_detection import eia_complete
 from pyValEIA.io import load
-from pyValEIA import nimo_conjunctions
-from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
+from pyValEIA.utils import nimo_conjunctions
+from pyValEIA.plots.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
 def nimo_swarm_single_plot(

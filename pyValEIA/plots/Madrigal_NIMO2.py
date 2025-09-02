@@ -17,10 +17,10 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import pydarn
 
-from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.utils.EIA_type_detection import eia_complete
 from pyValEIA import io
 from pyValEIA.utils import coords
-from pyValEIA import nimo_conjunctions
+from pyValEIA.utils import nimo_conjunctions
 
 
 def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):

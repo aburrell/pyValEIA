@@ -23,8 +23,8 @@ import cartopy.feature as cfeature
 import pydarn
 
 from pyValEIA import io
-from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA import nimo_conjunctions
+from pyValEIA.utils.EIA_type_detection import eia_complete
+from pyValEIA.utils import nimo_conjunctions
 
 
 def find_all_gaps(arr):
