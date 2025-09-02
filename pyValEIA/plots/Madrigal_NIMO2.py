@@ -6,7 +6,6 @@
 # ----------------------------------------------------------------------------
 
 import datetime as dt
-import glob
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,76 +15,12 @@ import pandas as pd
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-from netCDF4 import Dataset
 import pydarn
 
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.io import load
+from pyValEIA import io
 from pyValEIA.utils import coords
 from pyValEIA import nimo_conjunctions
-
-
-def longitude_to_local_time(longitude, utc_time):
-    """ Computes local time from longitude
-    Parameters
-    ----------
-    longiutde: array-like
-        array of longiudes
-    utc_time : array-like datetime
-        time (UT)
-    """
-    offset_sec = (3600 * np.array(longitude)) / 15
-    offset = pd.to_timedelta(offset_sec, unit='s')
-    return pd.to_datetime(utc_time) + offset
-
-
-def load_madrigal(stime, fdir):
-
-    """ Load madrigal tec data from given time
-
-    Parameters
-    ----------
-    stime: datetime object
-        Universal time for the desired madrigal output
-    fdir : str kwarg
-        directory where file is located
-    Returns
-    -------
-    mad_dc : dictionary object
-        dictionary of the madrigal data including:
-        tec, geographic latitude, geographic longitude,
-        dtec, timestamp, date (datetime format),
-        magnetic latitude, magnetic longitude
-
-    Notes
-    -----
-    This takes in madrgial files of format gps%y%m%dg.002.netCDF4
-    5 minute cadence
-
-    """
-    # If Time input is not at midnight, convert it
-    sday = stime.replace(hour=0, minute=0, second=0, microsecond=0)
-    dt_str = sday.strftime("%y%m%d")
-    search_pattern = os.path.join(fdir, 'gps' + dt_str + 'g.00*.netCDF4')
-
-    if len(glob.glob(search_pattern)) > 0:
-        fname = glob.glob(search_pattern)[0]
-    else:  # Download File
-        raise RuntimeError(f'No Madrigal File Found for {dt_str}')
-    file_id = Dataset(fname)
-
-    mad_tec = file_id.variables['tec'][:]
-    mad_gdlat = file_id.variables['gdlat'][:]
-    mad_glon = file_id.variables['glon'][:]
-    mad_dtec = file_id.variables['dtec'][:]
-    mad_time = file_id.variables['timestamps'][:]  # every 5 minutes
-    mad_date_list = np.array([sday + dt.timedelta(minutes=x * 5)
-                              for x in range(288)])
-
-    mad_dc = {
-        'time': mad_date_list, 'timestamp': mad_time, 'glon': mad_glon,
-        'glat': mad_gdlat, 'tec': mad_tec, 'dtec': mad_dtec}
-    return mad_dc
 
 
 def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
@@ -581,8 +516,8 @@ def NIMO_MAD_DailyFile(
                'Nimo_Third_Peak_TEC1']
     df = pd.DataFrame(columns=columns)
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
-    mad_dc = load_madrigal(sday, mad_file_dir)
-    nimo_dc = load.load_nimo(
+    mad_dc = io.load_madrigal(sday, mad_file_dir)
+    nimo_dc = io.load.load_nimo(
         start_day, fdir=nimo_file_dir, name_format=nimo_name_format,
         ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
         hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
@@ -667,7 +602,8 @@ def NIMO_MAD_DailyFile(
 
                 # calculate Local Time
                 # local time halfway between longitudes and between times
-                mad_lt = longitude_to_local_time(lon_min, mad_dc['time'][mt])
+                mad_lt = coords.longitude_to_local_time(lon_min,
+                                                        mad_dc['time'][mt])
                 lt_hr = mad_lt.hour + mad_lt.minute / 60 + mad_lt.second / 3600
                 df.at[f, 'LT_Hour'] = lt_hr
                 df.at[f, 'Mad_Nan_Percent'] = nan_perc
@@ -814,29 +750,8 @@ def NIMO_MAD_DailyFile(
             fig_map.savefig(save_as)
             plt.close()
 
-    # Save File
-    ds = mad_dc['time'][mt].strftime('%Y%m%d')
-    ys = mad_dc['time'][mt].strftime('%Y')
-
-    if file_save_dir == '':
-        file_save_dir = os.getcwd()
-
-    file_dir = file_save_dir + ys
-    Path(file_dir).mkdir(parents=True, exist_ok=True)
-    save_file = (file_dir + '/NIMO_MADRIGAL_EIA_type' + '_' + ds + '_'
-                 + str(lon_start) + 'glon_ascii.txt')
-
-    delimiter = '\t'  # Use '\t' for tab-separated text
-
-    # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
-
-    # Write the header to the file
-    with open(save_file, 'w') as f:
-        f.write(header_line)
-
-    # Append the DataFrame data without the header and index
-    df.to_csv(save_file, sep=delimiter, index=False, na_rep='NaN',
-              header=False, mode='a', encoding='ascii')
+    # Save the statistics to a dialy stats file
+    io.write.write_daily_stats(df, mad_dc['time'][mt], 'NIMO', 'MADRIGAL',
+                               file_save_dir, mad_lon=lon_start)
 
     return df

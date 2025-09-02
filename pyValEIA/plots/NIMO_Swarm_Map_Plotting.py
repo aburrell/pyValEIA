@@ -22,7 +22,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import pydarn
 
-from pyValEIA.io import load
+from pyValEIA import io
 from pyValEIA.EIA_type_detection import eia_complete
 from pyValEIA import nimo_conjunctions
 
@@ -190,7 +190,7 @@ def NIMO_SWARM_mapplot(
     f = -1
 
     # Get nimo dictionary for whole day
-    nimo_dc = load.load_nimo(
+    nimo_dc = io.load.load_nimo(
         start_day, nimo_file_dir, name_format=nimo_name_format, ne_var=ne_var,
         lon_var=lon_var, lat_var=lat_var, alt_var=alt_var, hr_var=hr_var,
         min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var, nmf2_var=nmf2_var,
@@ -200,7 +200,7 @@ def NIMO_SWARM_mapplot(
     for sa, sata in enumerate(Satellites):
 
         # Load Swarm Data for day per satellite
-        sw = load.load_swarm(sday, end_day, sata, swarm_file_dir)
+        sw = io.load.load_swarm(sday, end_day, sata, swarm_file_dir)
 
         # If satellite data is not available, move onto next one
         if len(sw) == 0:
@@ -248,8 +248,8 @@ def NIMO_SWARM_mapplot(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load.load_swarm(sday - timedelta(days=1),
-                                             sday, sata, swarm_file_dir)
+                    sw_new = io.load.load_swarm(sday - timedelta(days=1),
+                                                sday, sata, swarm_file_dir)
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
@@ -613,27 +613,8 @@ def NIMO_SWARM_mapplot(
                            + ts1 + '_' + ts2 + '.jpg')
                 fig.savefig(save_as)
                 plt.close()
-    ds = start_day.strftime('%Y%m%d')
-    ys = start_day.strftime('%Y')
 
-    # Save File - CWD IF EMPTY
-    if file_dir == '':
-        file_dir = os.getcwd()
-    f_dir = os.path.join(file_dir, ys)
-    Path(f_dir).mkdir(parents=True, exist_ok=True)
-    save_file = f_dir + '/NIMO_SWARM_EIA_type' + '_' + ds + 'ascii.txt'
-
-    delimiter = '\t'  # Use '\t' for tab-separated text
-
-    # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
-
-    # Write the header to the file
-    with open(save_file, 'w') as f:
-        f.write(header_line)
-
-    # Append the DataFrame data without the header and index
-    df.to_csv(save_file, sep=delimiter, index=False,
-              na_rep='NaN', header=False, mode='a', encoding='ascii')
+    # Write the output file
+    io.write.write_daily_stats(df, start_day, 'NIMO', 'SWARM', file_dir)
 
     return df

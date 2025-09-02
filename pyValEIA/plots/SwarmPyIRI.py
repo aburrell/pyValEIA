@@ -16,9 +16,8 @@ import PyIRI
 import PyIRI.edp_update as ml
 
 
-from pyValEIA.open_daily_files import open_daily
 from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA.io import load
+from pyValEIA import io
 from pyValEIA.utils import coords
 
 
@@ -89,17 +88,18 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
     pday = asday - timedelta(days=1)
 
     # Open Daily File
-    daily_df = open_daily(asday, 'NIMO_SWARM', daily_dir)
+    daily_df = io.load.load_daily_stats(asday, 'NIMO', 'SWARM', daily_dir)
+
     if fig_on:
         # Open Swarm Files for Plotting
-        swarm_dfA = load.load_swarm(asday, eday, 'A', swarm_dir)
-        swarm_dfB = load.load_swarm(asday, eday, 'B', swarm_dir)
-        swarm_dfC = load.load_swarm(asday, eday, 'C', swarm_dir)
+        swarm_dfA = io.load.load_swarm(asday, eday, 'A', swarm_dir)
+        swarm_dfB = io.load.load_swarm(asday, eday, 'B', swarm_dir)
+        swarm_dfC = io.load.load_swarm(asday, eday, 'C', swarm_dir)
 
         # Open Previous Day File if not already open
-        pre_swarm_dfA = load.load_swarm(pday, asday, 'A', swarm_dir)
-        pre_swarm_dfB = load.load_swarm(pday, asday, 'B', swarm_dir)
-        pre_swarm_dfC = load.load_swarm(pday, asday, 'C', swarm_dir)
+        pre_swarm_dfA = io.load.load_swarm(pday, asday, 'A', swarm_dir)
+        pre_swarm_dfB = io.load.load_swarm(pday, asday, 'B', swarm_dir)
+        pre_swarm_dfC = io.load.load_swarm(pday, asday, 'C', swarm_dir)
 
         swarm_A_full = pd.concat([pre_swarm_dfA, swarm_dfA], ignore_index=True)
         swarm_B_full = pd.concat([pre_swarm_dfB, swarm_dfB], ignore_index=True)
@@ -284,27 +284,6 @@ def PyIRI_NIMO_SWARM_plot(sday, daily_dir, swarm_dir, fig_on=True,
             plt.close()
 
     # Create Data File
-    ds = st1.strftime('%Y%m%d')
-    ys = st1.strftime('%Y')
-
-    # Save file to cwd if dir not provided
-    if file_save_dir == '':
-        file_save_dir = os.getcwd()
-    file_dir = file_save_dir + '/' + ys
-    Path(file_dir).mkdir(parents=True, exist_ok=True)
-    save_file = file_dir + '/PyIRI_EIA_type' + '_' + ds + 'ascii.txt'
-
-    delimiter = '\t'  # Use '\t' for tab-separated text
-
-    # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
-
-    # Write the header to the file
-    with open(save_file, 'w') as f:
-        f.write(header_line)
-
-    # Append the DataFrame data without the header and index
-    df.to_csv(save_file, sep=delimiter, index=False,
-              na_rep='NaN', header=False, mode='a', encoding='ascii')
+    io.write.write_daily_stats(df, st1, 'PyIRI', 'SWARM', file_save_dir)
 
     return df, daily_df
