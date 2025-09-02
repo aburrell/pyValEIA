@@ -24,7 +24,6 @@ from pyValEIA import Madrigal_NIMO2  # noqa F401
 from pyValEIA import NIMO_Swarm_Map_Plotting  # noqa F401
 from pyValEIA import NIMO_SWARM_single  # noqa F401
 from pyValEIA import offset_codes  # noqa F401
-from pyValEIA import open_daily_files  # noqa F401
 from pyValEIA import paper_plotting  # noqa F401
 from pyValEIA import utils  # noqa F401
 from pyValEIA import swarm_panel_ax  # noqa F401
