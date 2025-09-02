@@ -5,28 +5,12 @@
 # unlimited.
 # ----------------------------------------------------------------------------
 
-import datetime as dt
-import glob
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 from pathlib import Path
-import pandas as pd
-from scipy import stats
-
-from apexpy import Apex
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-from netCDF4 import Dataset
-import pydarn
-
-from pyValEIA.io import load
-from pyValEIA.EIA_type_detection import eia_complete
 
 
 def build_daily_stats_filename(stime, model, obs, file_dir, **kwargs):
-    """Load the daily statistics file with model-data comparisons.
+    """Build the filename and directory for daily EIA stat files.
 
     Parameters
     ----------
@@ -72,7 +56,7 @@ def build_daily_stats_filename(stime, model, obs, file_dir, **kwargs):
 
 
 def write_daily_stats(stat_data, stime, model, obs, file_dir, **kwargs):
-    """Load the daily statistics file with model-data comparisons.
+    """Write the daily statistics file for model-data comparisons.
 
     Parameters
     ----------
