@@ -39,9 +39,9 @@ def build_daily_stats_filename(stime, model, obs, file_dir, **kwargs):
 
     if obs.upper() == 'MADRIGAL':
         if 'mad_lon' in kwargs.keys():
-            end_str = "_{:.0f}_ascii.txt".format(kwargs['mad_lon'])
+            end_str = "_{:.0f}glon_ascii.txt".format(kwargs['mad_lon'])
         else:
-            end_str = "_{:.0f}_ascii.txt".format(-90.0)
+            end_str = "_{:.0f}glon_ascii.txt".format(-90.0)
     else:
         end_str = "ascii.txt"
 
