@@ -17,6 +17,7 @@ from netCDF4 import Dataset
 
 from pyValEIA import logger
 from pyValEIA.io.download import download_and_unzip_swarm
+from pyValEIA.io.write import build_daily_stats_filename
 from pyValEIA.utils import coords
 
 
@@ -349,25 +350,18 @@ def load_daily_stats(stime, model, obs, file_dir, **kwargs):
     stat_data : pd.DataFrame
         Dataframe that includes all information from type file
 
+    Raises
+    ------
+    ValueError
+        If expected file does not exist
+
     """
     # Build the year and date strings
-    ystr = stime.strftime('%Y')
-    dstr = stime.strftime('%Y%m%d')
+    date_dir, fname = build_daily_stats_filename(stime, model, obs, file_dir,
+                                                 **kwargs)
 
-    # Build the dataset name from the model and observation type
-    dataset = "_".join([model, obs.upper()])
-
-    if obs.upper() == 'MADRIGAL':
-        if 'mad_lon' in kwargs.keys():
-            end_str = "_{:.0f}_ascii.txt".format(kwargs['mad_lon'])
-        else:
-            end_str = "_{:.0f}_ascii.txt".format(-90.0)
-    else:
-        end_str = "ascii.txt"
-
-    # Build the filename
-    fname = os.path.join(file_dir, ystr, "{:s}{:s}".format(
-        "_".join([dataset, "EIA", "type", dstr]), end_str))
+    # Combine the directory and filename
+    fname = os.path.join(date_dir, fname)
 
     # Test that the file exists
     if not os.path.isfile(fname):

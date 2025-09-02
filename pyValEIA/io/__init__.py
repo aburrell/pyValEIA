@@ -7,3 +7,4 @@
 # Import the package modules and top-level classes
 from pyValEIA.io import download  # noqa F401
 from pyValEIA.io import load  # noqa F401
+from pyValEIA.io import write  # noqa F401

@@ -21,37 +21,14 @@ from pathlib import Path
 import pandas as pd
 from scipy import stats
 
-from apexpy import Apex
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from netCDF4 import Dataset
 import pydarn
 
-from pyValEIA.io import load
+from pyValEIA import io
+from pyValEIA.utils import coords
 from pyValEIA.EIA_type_detection import eia_complete
-
-
-def compute_magnetic_coords(lat, lon, time):
-    """ compute magnetic coordinates from geographic
-
-    Parameters
-    ----------
-    lat : array-like
-        latitudes
-    lon : array-like
-        longitudes
-    time : array-like
-        time
-    Returns
-    -------
-    mlat : array-like
-        magnetic latitude
-    mlon : array-like
-        magnetic longitude
-    """
-    apex = Apex(date=time[0])
-    mlat, mlon = apex.convert(lat, lon, 'geo', 'qd')
-    return mlat, mlon
 
 
 def load_nimo_offset(
@@ -223,8 +200,8 @@ def nimo_conjunction_offset(nimo_dc, swarm_check, offset, alt_str='hmf2',
     nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
 
     # Compute NIMO in magnetic coordinates
-    mlat, mlon = compute_magnetic_coords(nimo_dc['glat'],
-                                         nimo_lon_ls, nimo_time)
+    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
+                                                nimo_lon_ls, nimo_time[0])
 
     # Max and min of Swarm magnetic lats
     sw_mlat1 = min(swarm_check['Mag_Lat'])
@@ -430,7 +407,7 @@ def NIMO_SWARM_mapplot_offset(
     for sa, sata in enumerate(Satellites):
 
         # Load Swarm Data for day per satellite
-        sw = load.load_swarm(sday, end_day, sata, swarm_file_dir)
+        sw = io.load.load_swarm(sday, end_day, sata, swarm_file_dir)
 
         # If satellite data is not available, move onto next one
         if len(sw) == 0:
@@ -478,8 +455,8 @@ def NIMO_SWARM_mapplot_offset(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load.load_swarm(sday - dt.timedelta(days=1),
-                                             sday, sata, swarm_file_dir)
+                    sw_new = io.load.load_swarm(sday - dt.timedelta(days=1),
+                                                sday, sata, swarm_file_dir)
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
@@ -831,26 +808,8 @@ def NIMO_SWARM_mapplot_offset(
                            + 'days.jpg')
                 fig.savefig(save_as)
                 plt.close()
-    ds = start_day.strftime('%Y%m%d')
-    ys = start_day.strftime('%Y')
 
-    # Save File - CWD IF EMPTY
-    if file_dir == '':
-        file_dir = os.getcwd()
-    f_dir = os.path.join(file_dir, ys)
-    Path(f_dir).mkdir(parents=True, exist_ok=True)
-    save_file = f_dir + '/NIMO_SWARM_EIA_type_' + ds + 'ascii.txt'
+    # Save the daily EIA statistics file
+    io.write.write_daily_stats(df, start_day, 'NIMO', 'SWARM', file_dir)
 
-    delimiter = '\t'  # Use '\t' for tab-separated text
-
-    # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
-
-    # Write the header to the file
-    with open(save_file, 'w') as f:
-        f.write(header_line)
-
-    # Append the DataFrame data without the header and index
-    df.to_csv(save_file, sep=delimiter, index=False,
-              na_rep='NaN', header=False, mode='a', encoding='ascii')
     return df
