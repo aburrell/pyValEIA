@@ -210,6 +210,63 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     return swarm_data
 
 
+def load_madrigal(stime, fdir):
+    """Load Madrigal TEC data from given time.
+
+    Parameters
+    ----------
+    stime: datetime object
+        Universal time for the desired madrigal output
+    fdir : str kwarg
+        directory where file is located
+
+    Returns
+    -------
+    mad_dict : dict
+        Dictionary of the madrigal data including: TEC, geographic latitude,
+        geographic longitude, TEC error (dTEC), timestamp, and date in the
+        datetime format
+
+    Raises
+    ------
+    ValueError
+        If no file was found for the desired date
+
+    Notes
+    -----
+    This takes in madrgial files of format gps%y%m%dg.002.netCDF4
+    5 minute cadence
+
+    """
+    # If Time input is not at midnight, convert it
+    sday = stime.replace(hour=0, minute=0, second=0, microsecond=0)
+    search_pattern = os.path.join(fdir, 'gps{:s}g.00*.netCDF4'.format(
+        sday.strftime("%y%m%d")))
+
+    if len(glob.glob(search_pattern)) > 0:
+        fname = glob.glob(search_pattern)[0]
+    else:
+        raise ValueError('No Madrigal File Found for {:}'.format(sday))
+
+    # Load the data file
+    file_id = Dataset(fname)
+
+    # Extract the file data
+    mad_tec = file_id.variables['tec'][:]
+    mad_gdlat = file_id.variables['gdlat'][:]
+    mad_glon = file_id.variables['glon'][:]
+    mad_dtec = file_id.variables['dtec'][:]
+    mad_time = file_id.variables['timestamps'][:]  # every 5 minutes
+    mad_date_list = np.array([sday + dt.timedelta(minutes=x * 5)
+                              for x in range(288)])
+
+    # Format data into a dict
+    mad_dict = {'time': mad_date_list, 'timestamp': mad_time, 'glon': mad_glon,
+                'glat': mad_gdlat, 'tec': mad_tec, 'dtec': mad_dtec}
+
+    return mad_dict
+
+
 def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
               lon_var='lon', lat_var='lat', alt_var='alt', hr_var='hour',
               min_var='minute', tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
