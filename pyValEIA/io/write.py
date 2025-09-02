@@ -88,7 +88,7 @@ def write_daily_stats(stat_data, stime, model, obs, file_dir, **kwargs):
     save_file = os.path.join(date_dir, fname)
 
     # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
+    header_line = '#{:s}\n'.format('\t'.join(stat_data.columns))
 
     # Write the header to the file
     with open(save_file, 'w') as fout:

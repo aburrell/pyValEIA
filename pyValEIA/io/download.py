@@ -108,8 +108,8 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
             filename = ''.join([f_bse, instrument, satellite, "_", dataset,
                                 "_1B_", d_str, ".CDF.ZIP"])
         elif level == '2daily':
-            filename = ''.join([f_bse, instrument, satellite, dataset, "_2F_", d_str,
-                                ".ZIP"])
+            filename = ''.join([f_bse, instrument, satellite, dataset, "_2F_",
+                                d_str, ".ZIP"])
         else:
             raise ValueError('unknown level: {:}'.format(level))
 
@@ -127,8 +127,8 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
             efile = ''.join([f_bse, instrument, satellite, "_", dataset,
                              "_1B_", d_str, "*.cdf"])
         elif level == '2daily':
-            efile = ''.join([f_bse, instrument, satellite, dataset, "_2F_", d_str,
-                             "*.cdf"])
+            efile = ''.join([f_bse, instrument, satellite, dataset, "_2F_",
+                             d_str, "*.cdf"])
 
         extracted_files = os.path.join(extract_folder, efile)
         found_file = extracted_files

@@ -130,7 +130,7 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
     if dataset not in variables.keys():
         raise ValueError('unknown Swarm dataset.')
-    
+
     time_var = variables[dataset][0]
     lat_var = variables[dataset][1]
     lon_var = variables[dataset][2]
