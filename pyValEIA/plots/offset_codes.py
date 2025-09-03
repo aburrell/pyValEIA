@@ -4,47 +4,250 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
-# These functions will create a plot of Swarm
-# (between +/- some magnetic latitude)
-# and their NIMO counterparts 5 panels Swarm, NIMO Swarm Alt,
-# NIMO HMF2, NIMO Swarm alt + 100, NIMO NMF2 Map with swarm trajectory
-from datetime import timedelta
-import matplotlib.gridspec as gridspec
-from matplotlib.ticker import AutoMinorLocator
+# Using an Offset to compare swarm and nimo
+# Created by Alanah Cardenas-O'Toole
+# Summer 2025
+# Latest update: 08/07/2025
+# Email alanahco@umich.edu
+
+# NIMO Load
+import datetime as dt
+import glob
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from pathlib import Path
 import pandas as pd
 from scipy import stats
-import os
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from netCDF4 import Dataset
 import pydarn
 
-from pyValEIA.io import load
-from pyValEIA.EIA_type_detection import eia_complete
-from pyValEIA import nimo_conjunctions
+from pyValEIA import io
+from pyValEIA.utils import coords
+from pyValEIA.utils.EIA_type_detection import eia_complete
 
 
-def find_all_gaps(arr):
-    """Find gap indices.
+def load_nimo_offset(
+        stime, fdir='', name_format='NIMO_AQ_%Y%j', ne_var='dene',
+        lon_var='lon', lat_var='lat', alt_var='alt', hr_var='hour',
+        min_var='minute', tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
+        time_cadence=15):
+    """ Load NIMO day
+    Parameters
+    ----------
+    stime : datetime
+        day of desired NIMO run
+    fdir : str kwarg
+        file directory
+    name_format : str kwarg
+        format of NIMO file name including date format before .nc
+        Default: 'NIMO_AQ_%Y%j'
+    *_var : str kwarg
+        variable names to be opened in the file
+        defaults
+        --------
+        electron density - 'dene'
+        geo longitude - 'lon'
+        geo latitude - 'lat'
+        altitude - 'alt'
+        hour - 'hour'
+        minute - 'minute'
+        TEC - 'tec'
+        hmf2 - 'hmf2'
+        nmf2 - 'nmf2'
+    time_cadence: int kwarg
+        time cadence of data in minutes
+        default is 15 minutes
+    Returns
+    -------
+    nimo_dc : dictionary
+        dictionary with variables: dene,lon,lat,alt,hour,minute,date, tec,hmf2
+    """
+    fil_str = stime.strftime(name_format)
+    name_str = f"{fil_str}.nc"
+    fname = os.path.join(fdir, name_str)
+    fil = glob.glob(fname)[0]
+    nimo_id = Dataset(fil)
+    nimo_ne = nimo_id.variables[ne_var][:]
+    nimo_lon = nimo_id.variables[lon_var][:]
+    nimo_lat = nimo_id.variables[lat_var][:]
+    nimo_alt = nimo_id.variables[alt_var][:]
+    nimo_hr = nimo_id.variables[hr_var][:]
+    if min_var in nimo_id.variables.keys():
+        nimo_mins = nimo_id.variables[min_var][:]
+    else:
+        print('Warning: No minute variable, Treating hour as fractional hours')
+        nimo_mins = np.array([(h % 1) * 60 for h in nimo_hr]).astype(int)
+        nimo_hr = np.array([int(h) for h in nimo_hr])
+    nimo_tec = nimo_id.variables[tec_var][:]
+    nimo_hmf2 = nimo_id.variables[hmf2_var][:]
+    nimo_nmf2 = nimo_id.variables[nmf2_var][:]
+    sday = stime.replace(hour=nimo_hr[0], minute=nimo_mins[0],
+                         second=0, microsecond=0)
+    nimo_date_list = np.array([sday + dt.timedelta(minutes=(x - 1)
+                                                   * time_cadence)
+                               for x in range(len(nimo_ne))])
+    if np.sign(min(nimo_lat)) != -1:
+        print("Warning: No Southern latitudes")
+    elif np.sign(max(nimo_lat)) != 1:
+        print("Warning: No Northern latitudes")
+
+    nimo_dc = {
+        'time': nimo_date_list, 'dene': nimo_ne, 'glon': nimo_lon,
+        'glat': nimo_lat, 'alt': nimo_alt,
+        'hour': nimo_hr, 'minute': nimo_mins, 'tec': nimo_tec,
+        'hmf2': nimo_hmf2, 'nmf2': nimo_nmf2
+    }
+    return nimo_dc
+
+
+def nimo_conjunction_offset(nimo_dc, swarm_check, offset, alt_str='hmf2',
+                            inc=0, max_tdif=15):
+    """ Find conjunction between NIMO and swarm
 
     Parameters
     ----------
-    arr : array-like
-        Array of indices
+    nimo_dc : dictionary
+        dictionary of NIMO data
+    swarm_check : dataframe
+        dataframe of swarm data
+    alt_str: str kwarg
+        'A', 'B', 'C' or 'hmf2' (defualt) for altitude
+    inc : int kwarg
+        increase altitude by inc defulat is 0
+    max_tdif : double nkwarg
+        maximum time distance (in minutes) between a NIMO and Swarm
+        conjunction allowed (default 15)
 
     Returns
     -------
+    nimo_df : DataFrame
+        NIMO data at Swarm location/time
+    nimo_map : Dictionary
+        Dictionary of NmF2, geo lon, and geo lat
+        All 2D arrays for a map plot
+    Raises
+    ------
+    Value error if NIMO time and starting Swarm time are more than 15 minutes
+        apart
+    """
+    # Define the start and end times for Swarm during the conjunction
+    sw_time1 = swarm_check["Time"].iloc[0] + np.sign(offset) * dt.timedelta(
+        days=abs(offset))
+    sw_time2 = swarm_check["Time"].iloc[-1] + np.sign(offset) * dt.timedelta(
+        days=abs(offset))
+
+    # Conjunction Longitude Range for Swarm
+    sw_lon1 = min(swarm_check["Longitude"])
+    sw_lon2 = max(swarm_check["Longitude"])
+    sw_lon_check = ((sw_lon1 + sw_lon2) / 2)
+
+    # Check longitudes and times for NIMO
+    nimo_lon_ch = nimo_dc['glon'][(abs(nimo_dc['glon'] - sw_lon_check)
+                                   == min(abs(nimo_dc['glon']
+                                              - sw_lon_check)))]
+    nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1)
+                                 & (nimo_dc['time'] <= sw_time2))]
+
+    # If no time is between sw_time1 and sw_time2 look outside of range
+    if len(nimo_time) == 0:
+        nimo_time = nimo_dc['time'][((nimo_dc['time']
+                                      >= sw_time1 - dt.timedelta(minutes=5))
+                                     & (nimo_dc['time'] <= sw_time2))]
+        if len(nimo_time) == 0:
+            nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1)
+                                         & (nimo_dc['time']
+                                            <= sw_time2
+                                            + dt.timedelta(minutes=5)))]
+    elif len(nimo_time) > 1:
+        nimo_time = [nimo_time[0]]
+
+    if len(nimo_time) == 0:
+        nimo_time = min(nimo_dc['time'], key=lambda t: abs(sw_time1 - t))
+        if nimo_time - sw_time1 < dt.timedelta(minutes=max_tdif):
+            nimo_time = [nimo_time]
+        else:
+            print(nimo_dc['time'][0])
+            raise RuntimeError(
+                f"NIMO {nimo_time} - Swarm{sw_time1} > {max_tdif} min")
+
+    # Find the time and place where NIMO coincides with SWARM. Start with the
+    # time and lontitude indices
+    n_t = np.where(nimo_time == nimo_dc['time'])[0][0]
+    n_l = np.where(nimo_lon_ch == nimo_dc['glon'])[0][0]
+
+    # Get the altitude from alt_str and inc
+    if (alt_str == 'A') or (alt_str == 'C'):
+        alt = 462
+    elif alt_str == 'B':
+        alt = 511
+    elif alt_str == 'hmf2':  # hmf2(time, lat, lon)
+        alt = np.mean(nimo_dc['hmf2'][n_t, :, n_l])
+
+    # Incriment by user specified altitude in km
+    alt += inc
+
+    # Altitude index
+    n_a = np.where(min(abs(nimo_dc['alt'] - alt))
+                   == abs(nimo_dc['alt'] - alt))[0][0]
+
+    # Extract the NIMO density and longitudes for the desired slice
+    nimo_ne_lat_all = nimo_dc['dene'][n_t, n_a, :, n_l]
+    nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
+
+    # Compute NIMO in magnetic coordinates
+    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
+                                                nimo_lon_ls, nimo_time[0])
+
+    # Max and min of Swarm magnetic lats
+    sw_mlat1 = min(swarm_check['Mag_Lat'])
+    sw_mlat2 = max(swarm_check['Mag_Lat'])
+
+    # Select the same range of magnetic latitudes from NIMO as are available
+    # in the Swarm data
+    nimo_ne_return = nimo_ne_lat_all[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+
+    # Set a list of times for output; all are the conjugate time
+    time_ls = []
+    for i in range(len(nimo_ne_return)):
+        time_ls.append(nimo_time)
+
+    # Create Dataframe of NIMO data
+    nimo_df = pd.DataFrame()
+    nimo_df['Time'] = time_ls
+    nimo_df['Ne'] = nimo_ne_return
+    nimo_df['Mag_Lat'] = mlat[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+    nimo_df['Mag_Lon'] = mlon[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+    nimo_df['alt'] = np.ones(len(nimo_ne_return)) * nimo_dc['alt'][n_a]
+    nimo_df['Longitude'] = np.ones(len(nimo_ne_return)) * nimo_lon_ch[0]
+    nimo_df['Latitude'] = nimo_dc['glat'][((mlat >= sw_mlat1)
+                                           & (mlat <= sw_mlat2))]
+
+    nimo_nmf2 = nimo_dc['nmf2'][n_t, :, :]
+    nimo_lat = nimo_dc['glat']
+    nimo_lon = nimo_dc['glon']
+    nimo_map = {
+        'nmf2': nimo_nmf2, 'glon': nimo_lon, 'glat': nimo_lat
+    }
+    return nimo_df, nimo_map
+
+
+def find_all_gaps(arr):
+    """ find gap indices
+    e.g. in an array 2,3,5,6,7,8
+    find_all_gaps will return index 1 where the gap starts
+    Parameters
+    ----------
+    arr : array-like
+        array of indices
+    Returns
     gap_indices : array-like
-        Indices of gap start and end
-
-    Notes
-    -----
-    For example, in an array of `arr=[2,3,5,6,7,8]`, this function will return
-    `gap_inds=[1]` to indicate where the gap starts.
-
+        indices of gap start and end
+    -------
     """
     gap_indices = []
     # Iterate through the array and find where the gaps start
@@ -54,9 +257,9 @@ def find_all_gaps(arr):
     return gap_indices
 
 
-def NIMO_SWARM_mapplot(
-        start_day, swarm_file_dir, nimo_file_dir, MLat=30, file_dir='',
-        fig_on=True, fig_dir='', swarm_filt='barrel_average',
+def NIMO_SWARM_mapplot_offset(
+        start_day, swarm_file_dir, nimo_file_dir, offset=1, MLat=30,
+        file_dir='', fig_on=True, fig_dir='', swarm_filt='barrel_average',
         swarm_interpolate=1, swarm_envelope=True, swarm_barrel=3,
         swarm_window=2, nimo_filt='', nimo_interpolate=2, nimo_envelope=False,
         nimo_barrel=3, nimo_window=3, fosi=18, nimo_name_format='NIMO_AQ_%Y%j',
@@ -73,6 +276,9 @@ def NIMO_SWARM_mapplot(
         directory where swarm file can be found
     nimo_file_dir: str
         directory where nimo file can be found
+    offset : int kwarg
+        number of days to offset swarm data from nimo data to test
+        NIMO reliability
     MLat: int kwarg
         magnetic latitude 1 number
         default is 30 degrees for +/-30 maglat
@@ -180,7 +386,7 @@ def NIMO_SWARM_mapplot(
     # the time closest to the one they want to plot. Do this be removing time
     # of day elements from day-specific timestamp for start and end
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_day = sday + timedelta(days=1)
+    end_day = sday + dt.timedelta(days=1)
 
     # Swarm Satellites
     Satellites = ['A', 'B', 'C']
@@ -188,19 +394,20 @@ def NIMO_SWARM_mapplot(
     # f is the index of where we are in the dataframe to add data onto the next
     # slot
     f = -1
-
+    nimo_start_day = start_day + np.sign(offset) * dt.timedelta(
+        days=abs(offset))
     # Get nimo dictionary for whole day
-    nimo_dc = load.load_nimo(
-        start_day, nimo_file_dir, name_format=nimo_name_format, ne_var=ne_var,
-        lon_var=lon_var, lat_var=lat_var, alt_var=alt_var, hr_var=hr_var,
-        min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var, nmf2_var=nmf2_var,
-        time_cadence=nimo_cadence)
+    nimo_dc = load_nimo_offset(
+        nimo_start_day, fdir=nimo_file_dir, name_format=nimo_name_format,
+        ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
+        hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
+        nmf2_var=nmf2_var, time_cadence=nimo_cadence)
 
     # Iterate through satellites
     for sa, sata in enumerate(Satellites):
 
         # Load Swarm Data for day per satellite
-        sw = load.load_swarm(sday, end_day, sata, swarm_file_dir)
+        sw = io.load.load_swarm(sday, end_day, sata, swarm_file_dir)
 
         # If satellite data is not available, move onto next one
         if len(sw) == 0:
@@ -233,7 +440,7 @@ def NIMO_SWARM_mapplot(
             # Check for funky orbits
             if abs(min(swarm_check['Longitude'])
                    - max(swarm_check['Longitude'])) > 5:
-                print('Odd Orbit longitude span > 5 degrees: Skipping Pass')
+                print('Odd Orbit longitude span > 5 degrees')
                 continue
 
             # Check that latitude ranges that are +/- 5 degrees from MLat
@@ -248,8 +455,8 @@ def NIMO_SWARM_mapplot(
                 # Iterating through a whole month
                 if fg == 0:
                     # look at day before if available.
-                    sw_new = load.load_swarm(sday - timedelta(days=1),
-                                             sday, sata, swarm_file_dir)
+                    sw_new = io.load.load_swarm(sday - dt.timedelta(days=1),
+                                                sday, sata, swarm_file_dir)
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
@@ -311,10 +518,8 @@ def NIMO_SWARM_mapplot(
                 slope, intercept, rvalue, _, _ = stats.linregress(ml_all,
                                                                   lt_all)
                 df.at[f, 'LT_Hour'] = intercept
-                lt_plot = np.round(intercept, 2)
             else:
                 df.at[f, 'LT_Hour'] = np.nan
-                lt_plot = np.round(swarm_check['LT_hr'].iloc[0], 2)
 
             # Housekeeping: get rid of bad values by flag.
             # \https://earth.esa.int/eogateway/documents/20142/37627/Swarm-
@@ -333,18 +538,13 @@ def NIMO_SWARM_mapplot(
                 barrel_radius=swarm_barrel, window_lat=swarm_window)
             df.at[f, 'Swarm_EIA_Type'] = eia_type_slope
 
-            # Give user a heads up for an unknown type
-            if eia_type_slope == 'unknown':
-                print('Swarm type unknown for Sat ' + sata)
-                print(swarm_check['Time'].iloc[-1].strftime('%Y/%m/%d %H:%M'))
-
             # If user specified fig_on is True, create a figure
             if fig_on:
                 fig = plt.figure(figsize=(25, 27))
                 plt.rcParams.update({'font.size': fosi})
-                gs = gridspec.GridSpec(4, 2, width_ratios=[1, 1],
-                                       height_ratios=[1, 1, 1, 1],
-                                       wspace=0.1, hspace=0.3)
+                gs = mpl.gridspec.GridSpec(4, 2, width_ratios=[1, 1],
+                                           height_ratios=[1, 1, 1, 1],
+                                           wspace=0.1, hspace=0.3)
                 axs = fig.add_subplot(gs[0, 0])
                 axs.plot(swarm_check['Mag_Lat'],
                          swarm_check['Ne'], linestyle='--', label="Raw Ne")
@@ -386,7 +586,7 @@ def NIMO_SWARM_mapplot(
 
             if fig_on:
                 axs.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-                axs.xaxis.set_minor_locator(AutoMinorLocator())
+                axs.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
                 axs.tick_params(axis='both', which='major', length=8)
                 axs.tick_params(axis='both', which='minor', length=5)
                 axs.set_ylabel("Ne (cm$^-3$)")
@@ -427,10 +627,9 @@ def NIMO_SWARM_mapplot(
                 # RuntimeError for nimo_conjunction if no NIMO data within
                 # max_tdif of Swarm time
                 try:
-                    (nimo_swarm_alt,
-                     nimo_map) = nimo_conjunctions.nimo_conjunction(
-                         nimo_dc, swarm_check, alt_str, inc=inc_arr[i],
-                         max_tdif=max_tdif)
+                    nimo_swarm_alt, nimo_map = nimo_conjunction_offset(
+                        nimo_dc, swarm_check, offset, alt_str, inc=inc_arr[i],
+                        max_tdif=max_tdif)
                 except RuntimeError:
                     continue
 
@@ -445,12 +644,6 @@ def NIMO_SWARM_mapplot(
                      interpolate=nimo_interpolate,
                      barrel_envelope=nimo_envelope,
                      barrel_radius=nimo_barrel, window_lat=nimo_window)
-
-                # Give User a heads up for an unknown type
-                if eia_type_slope == 'unknown':
-                    print('NIMO type unknown at ' + alt_str + ' height')
-                    print(nimo_swarm_alt["Time"].iloc[0][0].strftime(
-                        '%Y/%m/%d_%H:%M:%S.%f'))
 
                 # general Nimo Info only need to save once per alt_arr
                 nts = 'Nimo_Time'
@@ -512,7 +705,7 @@ def NIMO_SWARM_mapplot(
                 if fig_on:
                     axns.ticklabel_format(axis='y', style='sci',
                                           scilimits=(0, 0))
-                    axns.xaxis.set_minor_locator(AutoMinorLocator())
+                    axns.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
                     axns.tick_params(axis='both', which='major', length=8)
                     axns.tick_params(axis='both', which='minor', length=5)
                     axns.set_xlabel("Magnetic Latitude (\N{DEGREE SIGN})")
@@ -522,7 +715,8 @@ def NIMO_SWARM_mapplot(
                     else:
                         axns.legend(fontsize=fosi - 3, loc='upper left')
                     axns.set_title('NIMO {:d} km'.format(
-                                   int(nimo_swarm_alt['alt'].iloc[0])))
+                        int(nimo_swarm_alt['alt'].iloc[0])))
+
             # Terminator and Map plotting
             if fig_on:
 
@@ -580,8 +774,8 @@ def NIMO_SWARM_mapplot(
                         color='k', rotation=90)
                 ax.text(-35, -105, 'Geographic Longitude (\N{DEGREE SIGN})',
                         color='k')
-                ax.set_title('NIMO NmF2 at {:}'.format(
-                             nimo_swarm_alt['Time'].iloc[0][0]))
+                ax.set_title('NIMO NmF2 at {:s}'.format(
+                    str(nimo_swarm_alt['Time'].iloc[0][0])))
 
                 # Add vertical colorbar on the side
                 cbar = plt.colorbar(heatmap, ax=ax, orientation='vertical',
@@ -595,14 +789,14 @@ def NIMO_SWARM_mapplot(
                 gl.top_labels = False  # Optional: Turn off top labels
                 gl.right_labels = False  # Optional: Turn off right labels
 
-                plt.suptitle(str(int(nimo_swarm_alt['Longitude'].iloc[0]))
-                             + ' GeoLon and ' + str(lt_plot) + ' LT',
-                             x=0.5, y=0.92, fontsize=fosi + 10)
                 plt.rcParams.update({'font.size': fosi})
                 ts1 = swarm_check['Time'].iloc[0].strftime('%H%M')
                 ts2 = swarm_check['Time'].iloc[-1].strftime('%H%M')
                 ds = swarm_check['Time'].iloc[0].strftime('%Y%m%d')
                 ys = swarm_check['Time'].iloc[0].strftime('%Y')
+                plt.suptitle(str(int(nimo_swarm_alt['Longitude'].iloc[0]))
+                             + ' GeoLon on ' + ds,
+                             x=0.5, y=0.92, fontsize=fosi + 10)
 
                 # Save figure - CWD IF EMPTY
                 if fig_dir == '':
@@ -610,30 +804,12 @@ def NIMO_SWARM_mapplot(
                 save_dir = os.path.join(fig_dir, ys, ds, 'Map_Plots')
                 Path(save_dir).mkdir(parents=True, exist_ok=True)
                 save_as = (save_dir + '/NIMO_SWARM_' + sata + '_' + ds + '_'
-                           + ts1 + '_' + ts2 + '.jpg')
+                           + ts1 + '_' + ts2 + 'offset' + str(offset)
+                           + 'days.jpg')
                 fig.savefig(save_as)
                 plt.close()
-    ds = start_day.strftime('%Y%m%d')
-    ys = start_day.strftime('%Y')
 
-    # Save File - CWD IF EMPTY
-    if file_dir == '':
-        file_dir = os.getcwd()
-    f_dir = os.path.join(file_dir, ys)
-    Path(f_dir).mkdir(parents=True, exist_ok=True)
-    save_file = f_dir + '/NIMO_SWARM_EIA_type' + '_' + ds + 'ascii.txt'
-
-    delimiter = '\t'  # Use '\t' for tab-separated text
-
-    # Create the custom header row with a hashtag
-    header_line = '#' + delimiter.join(df.columns) + '\n'
-
-    # Write the header to the file
-    with open(save_file, 'w') as f:
-        f.write(header_line)
-
-    # Append the DataFrame data without the header and index
-    df.to_csv(save_file, sep=delimiter, index=False,
-              na_rep='NaN', header=False, mode='a', encoding='ascii')
+    # Save the daily EIA statistics file
+    io.write.write_daily_stats(df, start_day, 'NIMO', 'SWARM', file_dir)
 
     return df

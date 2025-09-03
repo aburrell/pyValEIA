@@ -6,3 +6,5 @@
 
 # Import the package modules and top-level classes
 from pyValEIA.utils import coords  # noqa F401
+from pyValEIA.utils import EIA_type_detection  # noqa F401
+from pyValEIA.utils import nimo_conjunctions  # noqa F401

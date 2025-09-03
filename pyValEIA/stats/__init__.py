@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 # Full license can be found in License.md
 # ----------------------------------------------------------------------------
-"""Submodule for downloading, loading, and writing data."""
+"""Submodule for calculating statistics."""
 
 # Import the package modules and top-level classes
-from pyValEIA.io import download  # noqa F401
-from pyValEIA.io import load  # noqa F401
-from pyValEIA.io import write  # noqa F401
+from pyValEIA.stats import Mad_Stats  # noqa F401
+from pyValEIA.stats import Swarm_Stats  # noqa F401

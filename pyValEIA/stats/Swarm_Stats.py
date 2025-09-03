@@ -19,7 +19,7 @@ import warnings
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-from pyValEIA.open_daily_files import open_daily
+from pyValEIA.io import load
 
 
 def clean_type(arr):
@@ -314,8 +314,8 @@ def states_report_swarm(date_range, daily_dir, typ='eia',
 
     for sday in date_array:
         # load files
-        nimdf = open_daily(sday, 'NIMO_SWARM', daily_dir)
-        pydf = open_daily(sday, 'PyIRI', daily_dir)
+        nimdf = load.load_daily_stats(sday, 'NIMO', 'SWARM', daily_dir)
+        pydf = load.load_daily_stats(sday, 'PyIRI', 'SWARM', daily_dir)
 
         # NIMO
         s, d = clean_type(nimdf[NIMO_str].values)

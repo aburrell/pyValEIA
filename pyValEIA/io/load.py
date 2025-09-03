@@ -17,6 +17,7 @@ from netCDF4 import Dataset
 
 from pyValEIA import logger
 from pyValEIA.io.download import download_and_unzip_swarm
+from pyValEIA.io.write import build_daily_stats_filename
 from pyValEIA.utils import coords
 
 
@@ -129,7 +130,7 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
     if dataset not in variables.keys():
         raise ValueError('unknown Swarm dataset.')
-    
+
     time_var = variables[dataset][0]
     lat_var = variables[dataset][1]
     lon_var = variables[dataset][2]
@@ -207,6 +208,63 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
             swarm_data = swarm_data.rename(columns=rename[dataset])
 
     return swarm_data
+
+
+def load_madrigal(stime, fdir):
+    """Load Madrigal TEC data from given time.
+
+    Parameters
+    ----------
+    stime: datetime object
+        Universal time for the desired madrigal output
+    fdir : str kwarg
+        directory where file is located
+
+    Returns
+    -------
+    mad_dict : dict
+        Dictionary of the madrigal data including: TEC, geographic latitude,
+        geographic longitude, TEC error (dTEC), timestamp, and date in the
+        datetime format
+
+    Raises
+    ------
+    ValueError
+        If no file was found for the desired date
+
+    Notes
+    -----
+    This takes in madrgial files of format gps%y%m%dg.002.netCDF4
+    5 minute cadence
+
+    """
+    # If Time input is not at midnight, convert it
+    sday = stime.replace(hour=0, minute=0, second=0, microsecond=0)
+    search_pattern = os.path.join(fdir, 'gps{:s}g.00*.netCDF4'.format(
+        sday.strftime("%y%m%d")))
+
+    if len(glob.glob(search_pattern)) > 0:
+        fname = glob.glob(search_pattern)[0]
+    else:
+        raise ValueError('No Madrigal File Found for {:}'.format(sday))
+
+    # Load the data file
+    file_id = Dataset(fname)
+
+    # Extract the file data
+    mad_tec = file_id.variables['tec'][:]
+    mad_gdlat = file_id.variables['gdlat'][:]
+    mad_glon = file_id.variables['glon'][:]
+    mad_dtec = file_id.variables['dtec'][:]
+    mad_time = file_id.variables['timestamps'][:]  # every 5 minutes
+    mad_date_list = np.array([sday + dt.timedelta(minutes=x * 5)
+                              for x in range(288)])
+
+    # Format data into a dict
+    mad_dict = {'time': mad_date_list, 'timestamp': mad_time, 'glon': mad_glon,
+                'glat': mad_gdlat, 'tec': mad_tec, 'dtec': mad_dtec}
+
+    return mad_dict
 
 
 def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
@@ -325,3 +383,64 @@ def load_nimo(stime, file_dir, name_format='NIMO_AQ_%Y%j', ne_var='dene',
                'nmf2': nimo_nmf2}
 
     return nimo_dc
+
+
+def load_daily_stats(stime, model, obs, file_dir, **kwargs):
+    """Load the daily statistics file with model-data comparisons.
+
+    Parameters
+    ----------
+    stime : datetime
+        day of desired file
+    model : str
+        Case-sensitive name of model requested (e.g., 'NIMO', 'PyIRI').
+    obs : str
+        Name of data set requested (e.g., 'SWARM', 'MADRIGAL')
+    file_dir : str
+        File directory
+    kwargs : dict
+        Optional kwargs by data type.  Includes 'mad_lon', which expects
+        longitudes of either -90 deg E or 60 deg E for Madrigal data.
+
+    Returns
+    -------
+    stat_data : pd.DataFrame
+        Dataframe that includes all information from type file
+
+    Raises
+    ------
+    ValueError
+        If expected file does not exist
+
+    """
+    # Build the year and date strings
+    date_dir, fname = build_daily_stats_filename(stime, model, obs, file_dir,
+                                                 **kwargs)
+
+    # Combine the directory and filename
+    fname = os.path.join(date_dir, fname)
+
+    # Test that the file exists
+    if not os.path.isfile(fname):
+        raise ValueError('Could not file file: {:s}'.format(fname))
+
+    # Open the file
+    dat = np.genfromtxt(fname, delimiter=None, dtype=None, skip_header=0,
+                        names=True, encoding='utf-8',
+                        missing_values='NaN', filling_values=np.nan)
+
+    # If an entire column is np.nan, then genfromtxt cannot interpret the
+    # dtype, so it assigns it to True. The following code replaces True with
+    # The original np.nan values
+    for name in dat.dtype.names:
+        col = dat[name]
+        if (col.dtype == bool):
+            nan_col = np.full(col.shape, np.nan, dtype='float64')
+            dat = dat.astype([(n, 'float64',) if n == name else
+                              (n, dat.dtype[n]) for n in dat.dtype.names])
+            dat[name] = nan_col
+
+    # Save as a DataFrame
+    stat_data = pd.DataFrame(dat, columns=dat.dtype.names)
+
+    return stat_data

@@ -8,9 +8,9 @@ import numpy as np
 from datetime import timedelta
 import matplotlib.ticker as mticker
 
-from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.utils.EIA_type_detection import eia_complete
 from pyValEIA.io import load
-from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
+from pyValEIA.plots.NIMO_Swarm_Map_Plotting import find_all_gaps
 
 
 def format_latitude_labels(ax, xy='x'):

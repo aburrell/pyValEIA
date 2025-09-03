@@ -4,23 +4,69 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
-# Single NIMO Swarm Plot
+# Paper Plots
 
-import numpy as np
+# Single NIMO Swarm Plot for paper purposes
+from datetime import timedelta, datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from datetime import timedelta
+import matplotlib.ticker as mticker
+import numpy as np
 import os
 from pathlib import Path
 
-import pydarn
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import pydarn
 
-from pyValEIA.EIA_type_detection import eia_complete
+from pyValEIA.utils.EIA_type_detection import eia_complete
 from pyValEIA.io import load
-from pyValEIA import nimo_conjunctions
-from pyValEIA.NIMO_Swarm_Map_Plotting import find_all_gaps
+from pyValEIA.utils import nimo_conjunctions
+from pyValEIA.plots.NIMO_Swarm_Map_Plotting import find_all_gaps
+
+
+def decHr_astime(LT):
+    """ Take a decimal hour and convert to timestring
+    Parameters
+    ----------
+    LT: double
+        single decimal hour time
+
+    Returns String time as H:M
+    """
+    LT_hr = int(np.trunc(LT))
+    LT_min = int(np.trunc((LT % 1) * 60))
+
+    # Arbitrary date
+    dat = datetime(2000, 1, 1, LT_hr, LT_min)
+
+    return dat.strftime('%H:%M')
+
+
+def format_latitude_labels(ax, xy='x'):
+    """
+    Formats the latitude axis labels with degree symbols and N/S suffixes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The Matplotlib axes object
+    xy : str kwarg
+        'x' (defualt) or 'y' depending on which axis you want to have
+        degree symbol N/S formatting
+    """
+
+    def latitude_formatter(latitude, pos):
+        if latitude > 0:
+            return f"{latitude:.0f}°N"
+        elif latitude < 0:
+            return f"{abs(latitude):.0f}°S"
+        else:
+            return "0°"
+    if xy == 'x':
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(latitude_formatter))
+    elif xy == 'y':
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(latitude_formatter))
 
 
 def nimo_swarm_single_plot(
@@ -32,7 +78,7 @@ def nimo_swarm_single_plot(
         lon_var='lon', lat_var='lat', alt_var='alt', hr_var='hour',
         min_var='minute', tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
         nimo_cadence=15):
-    """ Plot and save a single NIMO/Swarm EIA Type Plot
+    """ Plot and save a single NIMO/Swarm EIA Type Plot for paper
     Parameters
     ----------
     stime : datetime object
@@ -174,18 +220,33 @@ def nimo_swarm_single_plot(
         barrel_radius=swarm_barrel, window_lat=swarm_window)
 
     # Create Figure
-    fig = plt.figure(figsize=(14, 16))
+    fig = plt.figure(figsize=(15, 10))
     plt.rcParams.update({'font.size': fosi})
-    gs = mpl.gridspec.GridSpec(4, 2, width_ratios=[1, 1],
+    gs = mpl.gridspec.GridSpec(4, 3, width_ratios=[1, 1, 1],
                                height_ratios=[1, 1, 1, 1], wspace=0.1,
-                               hspace=0.3)
-    # Plot the Swarm Data
-    axs = fig.add_subplot(gs[0, 0])
+                               hspace=0.8)
+
+    # Make first panel the legend for top panel
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax0.plot(0, 0, linestyle='--',
+             color='blue', label='Swarm ' + satellite + ' $N_{e}$')
+    ax0.plot(0, 0, color='orange', label='Swarm Barrel Average')
+
+    ax0.plot(0, 0, linestyle='-.', color='k', label='NIMO $N_{e}$')
+    ax0.set_ylim([-99, -89])
+    ax0.set_xlim([-100, -99])
+    ax0.spines['top'].set_visible(False)
+    ax0.spines['right'].set_visible(False)
+    ax0.spines['bottom'].set_visible(False)
+    ax0.spines['left'].set_visible(False)
+    ax0.legend(loc='center')
+    ax0.axis('off')
+
+    # Plot the Swarm Data --------------------------------------------------
+    axs = fig.add_subplot(gs[0:2, 1:])
     axs.plot(swarm_check['Mag_Lat'], swarm_check['Ne'], linestyle='--',
-             label="Raw Ne")
-    axs.plot(sw_lat, sw_filt, label='Filtered Ne')
-    axs.scatter(swarm_check['Mag_Lat'].iloc[0], swarm_check['Ne'].iloc[0],
-                color='white', s=0, label=eia_type_slope)
+             color='blue', label=None)
+    axs.plot(sw_lat, sw_filt, color='orange', label=eia_type_slope)
     axs.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
 
     # Plot Swarm Peak Latitudes
@@ -194,93 +255,56 @@ def nimo_swarm_single_plot(
             lat_loc = (abs(p - swarm_check['Mag_Lat']).argmin())
             axs.vlines(swarm_check['Mag_Lat'].iloc[lat_loc],
                        ymin=min(swarm_check['Ne']),
-                       ymax=swarm_check['Ne'].iloc[lat_loc], alpha=0.5,
-                       color='black')
+                       ymax=swarm_check['Ne'].iloc[lat_loc], alpha=0.7,
+                       color='orange')
 
     axs.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
     axs.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
     axs.tick_params(axis='both', which='major', length=8)
     axs.tick_params(axis='both', which='minor', length=5)
-    axs.set_ylabel("Ne")
-    axs.set_xlabel("Magnetic Latitude")
+    axs.set_ylabel("$N_{e}$ cm$^{-3}$")
+    axs.set_xlabel(r'Magnetic Latitude')
 
+    # Add NIMO Panel
+    # Go through through Altitudes
+    nimo_swarm_alt, nimo_map = nimo_conjunctions.nimo_conjunction(
+        nimo_dc, swarm_check, satellite, inc=0)
+    nlat_use = nimo_swarm_alt['Mag_Lat'].values
+    density = nimo_swarm_alt['Ne'].values
+
+    den_str = 'Ne'
+    nimo_lat, nimo_dfilt, eia_type_slope, z_lat, plats, p3 = eia_complete(
+        nlat_use, density, den_str, filt=nimo_filt,
+        interpolate=nimo_interpolate, barrel_envelope=nimo_envelope,
+        barrel_radius=nimo_barrel, window_lat=nimo_window)
+
+    axs.plot(nimo_swarm_alt['Mag_Lat'],
+             nimo_swarm_alt['Ne'], linestyle='-.', color='black',
+             label=eia_type_slope)
+
+    # Plot NIMO Peak Latitudes
+    if len(plats) > 0:
+        for pi, p in enumerate(plats):
+            lat_loc = (abs(p - nimo_swarm_alt['Mag_Lat']).argmin())
+            lat_plot = nimo_swarm_alt['Mag_Lat'].iloc[lat_loc]
+            axs.vlines(lat_plot, ymin=min(nimo_swarm_alt['Ne']),
+                       ymax=nimo_swarm_alt['Ne'].iloc[lat_loc],
+                       alpha=0.7, linestyle='-.', color='k')
+
+    # Add Grid and limits to x axis
+    axs.grid(axis='x')
+    axs.set_xlim([min(swarm_check['Mag_Lat']), max(swarm_check['Mag_Lat'])])
+    format_latitude_labels(axs)
     # Change location of legend if it south in eia_type_slope
     if 'south' in eia_type_slope:
         axs.legend(fontsize=fosi - 3, loc='upper right')
     else:
         axs.legend(fontsize=fosi - 3, loc='upper left')
-    if satellite == 'B':
-        axs.set_title('Swarm ' + satellite + ' ' + str(511) + 'km')
-    else:
-        axs.set_title('Swarm ' + satellite + ' ' + str(462) + 'km')
 
-    # Set altiudes and increments for NIMO conjunctions
-    alt_arr = [satellite, 'hmf2', satellite]
-    inc_arr = [0, 0, 100]
+    ts1 = swarm_check['Time'].iloc[0].strftime('%H:%M')
+    ts2 = swarm_check['Time'].iloc[-1].strftime('%H:%M')
 
-    # Set plot location using lo and r i.e. subplot(lo[i], r[i])
-    lo = [0, 1, 1]
-    r = [1, 0, 1]
-
-    # NIMO-------------------------
-    for i in range(len(alt_arr)):
-
-        # Choose an altitude for NIMO
-        alt_str = alt_arr[i]  # Go through through Altitudes
-        nimo_swarm_alt, nimo_map = nimo_conjunctions.nimo_conjunction(
-            nimo_dc, swarm_check, alt_str, inc=inc_arr[i])
-        nlat_use = nimo_swarm_alt['Mag_Lat'].values
-        density = nimo_swarm_alt['Ne'].values
-
-        # Detect NIMO EIA Type -----------------------------------------
-        den_str = 'Ne'
-        nimo_lat, nimo_dfilt, eia_type_slope, z_lat, plats, p3 = eia_complete(
-            nlat_use, density, den_str, filt=nimo_filt,
-            interpolate=nimo_interpolate, barrel_envelope=nimo_envelope,
-            barrel_radius=nimo_barrel, window_lat=nimo_window)
-
-        axns = fig.add_subplot(gs[lo[i], r[i]])  # plot nimo ne at swarm alt
-        axns.plot(nimo_swarm_alt['Mag_Lat'],
-                  nimo_swarm_alt['Ne'], linestyle='--', marker='o',
-                  label='Raw Ne')
-        axns.plot(nimo_lat, nimo_dfilt, color='C1', label="Filtered Ne")
-        axns.scatter(nimo_swarm_alt['Mag_Lat'].iloc[0],
-                     nimo_swarm_alt['Ne'].iloc[0], color='white', s=0,
-                     label=eia_type_slope)
-
-        # Plot NIMO Peak Latitudes
-        if len(plats) > 0:
-            for pi, p in enumerate(plats):
-                lat_loc = (abs(p - nimo_swarm_alt['Mag_Lat']).argmin())
-                lat_plot = nimo_swarm_alt['Mag_Lat'].iloc[lat_loc]
-                axns.vlines(lat_plot, ymin=min(nimo_swarm_alt['Ne']),
-                            ymax=nimo_swarm_alt['Ne'].iloc[lat_loc],
-                            alpha=0.5, color='k')
-
-        # Plot third peak if not a ghost and detected
-        if len(p3) > 0:
-            for pi, p in enumerate(p3):
-                lat_loc = (abs(p - nimo_swarm_alt['Mag_Lat']).argmin())
-                lat_plot = nimo_swarm_alt['Mag_Lat'].iloc[lat_loc]
-                axns.vlines(lat_plot, ymin=min(nimo_swarm_alt['Ne']),
-                            ymax=nimo_swarm_alt['Ne'].iloc[lat_loc],
-                            linestyle='--', alpha=0.5, color='r')
-
-        axns.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-        axns.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
-        axns.tick_params(axis='both', which='major', length=8)
-        axns.tick_params(axis='both', which='minor', length=5)
-        axns.set_xlabel("Magnetic Latitude")
-
-        if i == 1:
-            axns.set_ylabel("Ne")
-
-        if 'south' in eia_type_slope:
-            axns.legend(fontsize=fosi - 3, loc='upper right')
-        else:
-            axns.legend(fontsize=fosi - 3, loc='upper left')
-        axns.set_title('Nimo {:d} km'.format(
-            int(nimo_swarm_alt['alt'].iloc[0])))
+    axs.set_title(f'Swarm between {ts1}UT and {ts2}UT')
 
     # ----------------- MAP PLOT --------------------
     # Set the date and time for the terminator
@@ -307,8 +331,9 @@ def nimo_swarm_single_plot(
         lons.append(lon)
     lons = [(lon + 180) % 360 - 180 for lon in lons]
 
-    # plot nmf2 map
-    ax = fig.add_subplot(gs[2:, :], projection=ccrs.PlateCarree())
+    # plot nmf2 map ------------------------------
+    ax = fig.add_subplot(gs[2:, 1:], projection=ccrs.PlateCarree())
+
     ax.set_global()
 
     # Add Coastlines
@@ -332,31 +357,49 @@ def nimo_swarm_single_plot(
             linewidth=2.0, label='Terminator 300km')
     leg = ax.legend(framealpha=0, loc='upper right')
 
+    # Set text color
     for text in leg.get_texts():
         text.set_color('white')
 
+    # set_aspect helps sizing
+    ax.set_aspect('auto', adjustable='box')
+
     # Set labels
-    ax.text(-220, -50, 'Geographic Latitude', color='k', rotation=90)
+    ax.text(210, -50, 'Geographic Latitude', color='k', rotation=270)
     ax.text(-50, -110, 'Geographic Longitude', color='k')
-    ax.set_title('NIMO N$_m$F$_2$ at {:}'.format(
-        nimo_swarm_alt['Time'].iloc[0][0]), fontsize=fosi + 5)
+
+    ax.set_title('NIMO N$_m$F$_2$ at {:s} UT'.format(
+        nimo_swarm_alt['Time'].iloc[0][0].strftime('%H:%M')), fontsize=fosi + 5)
+
+    cax = fig.add_subplot(gs[2:, 0], projection=ccrs.PlateCarree())
 
     # Add vertical colorbar on the side
-    cbar = plt.colorbar(heatmap, ax=ax, orientation='vertical',
-                        pad=0.04, shrink=0.7)
-    cbar.set_label("N$_m$F$_2$")
+    cbar = plt.colorbar(heatmap, ax=cax, orientation='vertical',
+                        location='right', pad=0.04, shrink=0.8)
+    cbar.ax.set_title("N$_m$F$_2$")
+    cbar.set_label("cm$^{-3}$")
     cbar.ax.tick_params(labelsize=fosi)
+    cbar.ax.yaxis.set_label_position('left')
+    cbar.ax.yaxis.tick_left()
+    cax.spines['top'].set_visible(False)
+    cax.spines['right'].set_visible(False)
+    cax.spines['bottom'].set_visible(False)
+    cax.spines['left'].set_visible(False)
+    cax.axis('off')
 
     # Add grids and unset the grid labels
     gl = ax.gridlines(draw_labels=True, linewidth=0, color='gray', alpha=0.5)
-    gl.top_labels = False  # Optional: Turn off top labels
-    gl.right_labels = False  # Optional: Turn off right labels
+    gl.top_labels = False   # Turn off top labels
+    gl.right_labels = True  # Turn on right labels
+    gl.left_labels = False  # Turn off left labels
+    ds = swarm_check['Time'].iloc[0].strftime('%d %b %Y')
 
-    fig.suptitle(str(int(nimo_swarm_alt['Longitude'].iloc[0]))
-                 + ' GeoLon and '
-                 + str(np.round(swarm_check['LT_hr'].iloc[0], 2)) + ' LT',
+    # Plot Title
+
+    lt_plot = decHr_astime(swarm_check['LT_hr'].iloc[0])
+    fig.suptitle(ds + ' ' + ' at ' + lt_plot + 'LT',
                  fontsize=fosi + 10)
-    fig.subplots_adjust(bottom=.03, top=.92)
+    fig.subplots_adjust(bottom=.03, top=.9, hspace=0.3)
 
     # Save plot if an output directory was supplied
     if os.path.isdir(plot_dir):
@@ -367,7 +410,8 @@ def nimo_swarm_single_plot(
         fig_dir = os.path.join(plot_dir, ds)
         Path(fig_dir).mkdir(parents=True, exist_ok=True)
 
-        figname = os.path.join(fig_dir, '_'.join(['NIMO_SWARM', satellite, ds,
+        figname = os.path.join(fig_dir, '_'.join(['NIMO_SWARM_Paper_',
+                                                  satellite, ds,
                                                   ts1, '{:}.jpg'.format(ts2)]))
         fig.savefig(figname)
 

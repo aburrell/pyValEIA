@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
 
-from pyValEIA.open_daily_files import open_daily
+from pyValEIA.io import load
 
 
 def clean_type(arr):
@@ -194,7 +194,8 @@ def states_report_mad(date_range, daily_dir, typ='eia', mad_lon=-90):
     for sday in date_array:
 
         # load files from date_array list
-        nimdf = open_daily(sday, 'NIMO_MADRIGAL', daily_dir, mad_lon=mad_lon)
+        nimdf = load.load_daily_stats(sday, 'NIMO', 'MADRIGAL', daily_dir,
+                                      mad_lon=mad_lon)
 
         # NIMO
         s, d = clean_type(nimdf['Nimo_Type'].values)
