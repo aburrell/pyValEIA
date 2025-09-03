@@ -4,6 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+"""Functions to write standard output files."""
 
 import os
 from pathlib import Path
