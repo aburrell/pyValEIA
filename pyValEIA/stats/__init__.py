@@ -5,5 +5,4 @@
 """Submodule for calculating statistics."""
 
 # Import the package modules and top-level classes
-from pyValEIA.stats import Mad_Stats  # noqa F401
-from pyValEIA.stats import Swarm_Stats  # noqa F401
+from pyValEIA.stats import skill_score  # noqa F401
