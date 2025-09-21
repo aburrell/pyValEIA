@@ -131,3 +131,78 @@ def simple_barrel_roll(xvar, yvar, barrel_radius, envelope=True,
         yvar_det = np.array(y_combined)
 
     return yvar_det
+
+
+def rolling_nanmeasure(arr, window, measure='mean'):
+    """Calculate the rolling mean or median of an array with or without nans.
+
+    Parameters
+    ----------
+    arr: array-like
+        array of values to roll over
+    window : int
+        window size
+    measure : str
+        Method to apply to data; 'mean', 'median', 'average' (default='mean')
+
+    Returns
+    -------
+    out : array-like
+        rolling measured array of same length as original
+
+    """
+    # Initialize array of same length as input
+    out = np.full_like(arr, np.nan, dtype=float)
+    half_w = window // 2
+
+    # Iterate through array
+    for i in range(len(arr)):
+        left = max(0, i - half_w)
+        right = min(len(arr), i + half_w + 1)
+        window_vals = arr[left:right]
+
+        # Choose between mean/average and median
+        if measure.lower() in ['mean', 'average']:
+            if np.all(np.isnan(window_vals)):
+                out[i] = np.nan
+            else:
+                out[i] = np.nanmean(window_vals)
+        elif measure.lower() == 'median':
+            if np.all(np.isnan(window_vals)):
+                out[i] = np.nan
+            else:
+                out[i] = np.nanmedian(window_vals)
+        else:
+            raise ValueError('unknown method for smoothing: {:}'.format(
+                measure))
+
+    return out
+
+
+def find_nan_ranges(arr):
+    """Identify continuous ranges of NaN values in an array.
+
+    Parameters
+    ----------
+    arr : array-like
+        array with nans
+
+    Returns
+    -------
+    nan_list : list-like
+        List of (start_idx, end_idx) for each contiguous NaN section
+
+    """
+    # Get continuous ranges of nan values
+    isnan = np.isnan(arr)
+    edges = np.diff(isnan.astype(int))
+    starts = np.where(edges == 1)[0] + 1
+    ends = np.where(edges == -1)[0] + 1
+
+    if isnan[0]:
+        starts = np.insert(starts, 0, 0)
+    if isnan[-1]:
+        ends = np.append(ends, len(arr))
+    nan_list = list(zip(starts, ends))
+
+    return nan_list

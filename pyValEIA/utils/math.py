@@ -51,3 +51,30 @@ def base_round(xvals, base=5):
     round_vals = np.floor(base * np.round(xvals.astype(np.float64) / base))
 
     return round_vals
+
+
+def set_dif_thresh(lat_span, percent=0.05):
+    """Set a difference threshold.
+
+    Parameters
+    ----------
+    lat_span: double
+        span of latitude array e.g. max(latitude) - min(latitude)
+    percent : kwarg double
+        Percent as a decimal for difference  threshold from 0-1 (default=0.05)
+
+    Returns
+    -------
+    float
+        Percentage times the span
+
+    Notes
+    -----
+    Set the threshold for what is different, input scale (if lat_span) = 50,
+    then our max tec/ne is 50 so set thresh to 5 for 10%
+    can also use this for maximum difference between peak and trough,
+    so can use smaller threshold
+
+    """
+
+    return percent * lat_span
