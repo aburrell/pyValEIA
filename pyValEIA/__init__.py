@@ -16,6 +16,7 @@ logging.raiseExceptions = False
 logger = logging.getLogger('pyValEIA_logger')
 
 # Import the package modules and top-level classes
+from pyValEIA import eia  # noqa F401
 from pyValEIA import io  # noqa F401
 from pyValEIA import plots  # noqa F401
 from pyValEIA import stats  # noqa F401
