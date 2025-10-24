@@ -610,7 +610,7 @@ def single_peak_rules(p1, tec, lat):
 
 
 def double_peak_rules(p1a, p2b, tec, lat, zero_slope=0.5):
-    """Determine if something is a saddle, eia, or single peak
+    """Determine if something is a saddle, eia, or single peak.
 
     Parameters
     ----------

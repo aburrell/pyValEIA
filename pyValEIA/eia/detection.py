@@ -294,7 +294,7 @@ def evaluate_eia_gradient(lat, grad_dat, edge_lat=5):
 
 
 def flat_rules(p1, tec, lat, zero_slope=0.5):
-    """Determines if a peak is actually flat along with direciton.
+    """Determine if a peak is actually flat along with direciton.
 
     Parameters
     ----------
