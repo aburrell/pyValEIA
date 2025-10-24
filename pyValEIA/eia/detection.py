@@ -88,8 +88,8 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
 
     # If desired, interpolate data to a higher resolution
     if interpolate > 1:
-        sort_lat = np.linspace(min(sort_lat), max(sort_lat),
-                               interpolate * len(sort_lat))
+        x_new = np.linspace(min(sort_lat), max(sort_lat),
+                            interpolate * len(sort_lat))
         sort_density = np.interp(x_new, sort_lat, sort_density)
 
     # Perform the first round of smoothing
@@ -293,87 +293,26 @@ def evaluate_eia_gradient(lat, grad_dat, edge_lat=5):
     return zero_lat
 
 
-def single_peak_rules(p1, tec, lat):
-    """Determine if a peak is a peak, flat, or trough.
+def flat_rules(p1, tec, lat, zero_slope=0.5):
+    """Determines if a peak is actually flat along with direciton.
 
-    Parameters:
-    -------------
+    Parameters
+    ----------
     p1 : array-like of length 1
         index of maxima
     lat : array-like
         latitude
     tec : array-like
         tec or ne
-
-    Returns:
-    ---------
-    eia_state : str
-        saddle, peak (north, south, (saddle) peak, (saddle) trough)
-    plats : array-like
-        latitude of peak
-    """
-    # calculate the latitudinal span of the peak
-    n, s = peak_span(p1, tec, lat)
-
-    # fit a line to the tec
-    slope, intercept, rvalue, _, _ = stats.linregress(lat, tec)
-
-    # detrend the tec for zlope
-    tec_filt = slope * lat + intercept
-    tec_detrend = tec - tec_filt
-
-    loc_check = np.array([-15, 0, 15])
-    zlope, ztec, zlat = getzlopes(loc_check, lat, tec_detrend)
-
-    tr_check = 0  # Check if the slope decreases then increases
-    if (np.sign(zlope[0]) == -1) & (np.sign(zlope[1]) == 1):
-        tr_check = 1
-
-    # check if there is span of the peak
-    if ((n == -99) | (s == -99)) & (tr_check == 1):
-        eia_state = 'trough'
-        plats = []
-    else:
-        flat = flat_rules(p1, tec, lat)  # check if flat
-        if flat == 0:  # Use location of peak to find orientation
-            eia_state = "peak"
-            peak_lat = lat[p1]
-            if peak_lat > 3:
-                eia_state += '_north'
-            elif peak_lat < -3:
-                eia_state += '_south'
-            plats = [lat[p1]]
-        elif flat == 2:  # trough
-            plats = []
-            eia_state = 'trough'
-        else:
-            plats = []
-            eia_state = 'flat'
-            if np.sign(flat) == 1:
-                eia_state += '_north'
-            else:
-                eia_state += '_south'
-    return eia_state, plats
-
-
-def flat_rules(p1, tec, lat, zero_slope=0.5):
-    """ Determines if a peak is actually flat along with direciton
-    Parameters:
-    -------------
-    p1: array-like of length 1
-        index of maxima
-    lat: array-like
-        latitude
-    tec: array-like
-        tec or ne
     zero_slope : float
         Threshold for the zero-slope value (default=0.5)
 
-    Returns:
-    ---------
-    flat: int
+    Returns
+    -------
+    flat : int
         1 is flat_north, -1 is flat south, 0 is not flat
         2 if trough
+
     """
     # tec and lat of peak
     tec_max = tec[p1]
@@ -473,196 +412,25 @@ def flat_rules(p1, tec, lat, zero_slope=0.5):
     return flat
 
 
-def double_peak_rules(p1a, p2b, tec, lat, zero_slope=0.5):
-    """ Determine if something is a saddle, eia, or single peak
-
-    Parameters:
-    -------------
-    p1a: int
-        single index of first maxima
-    p2b: int
-        single index of second maxima
-    lat : array-like
-        latitude
-    tec : array-like
-        tec or ne
-    zero_slope : float
-        Threshold for a zero-sloped line (default=0.5)
-
-    Returns:
-    ---------
-    eia_state : str
-        string of eia state including: 'eia_north',
-        'eia_south', 'eia_symmetric', 'eia_saddle_peak',
-        'eia_saddle_peak_north', 'eia_saddle_peak_south',
-        and orientations output by single_peak_rules
-    """
-
-    # set zero slope and symmetrical tec values
-    lat_span = (max(lat) - min(lat))
-    sym_tec = math.set_dif_thresh(lat_span)
-
-    # peak lat and tec
-    p_i = [p1a, p2b]
-    p_l = lat[p_i]
-    p_t = tec[p_i]
-
-    # check that p1a does not equal p2b
-    if p1a != p2b:
-        if tec[p1a] != tec[p2b]:  # check if the tec is the same at each peak
-            max_lat = p_l[max(p_t) == p_t]  # latitude at higher peak
-            min_lat = p_l[min(p_t) == p_t]  # latitude at lower peak
-            max_tec = p_t[max(p_t) == p_t]  # tec at higher peak
-            min_tec = p_t[min(p_t) == p_t]  # tec at lower peak
-            pmax = np.where(lat == max_lat)[0][0]
-            pmin = np.where(lat == min_lat)[0][0]
-        else:
-            max_lat = lat[p1a]
-            max_tec = tec[p1a]
-            min_lat = lat[p2b]
-            min_tec = tec[p2b]
-            pmax = p1a
-            pmin = p2b
-    else:
-        max_lat = p_l[0]
-        min_lat = max_lat
-        max_tec = p_t[0]
-        min_tec = max_tec
-        pmax = p1a
-        pmin = pmax
-
-    # Check if both peaks are different enough in lat
-    # and not on same side of equator are p1 and p2
-    if (abs(max_lat - min_lat) > 1) & (np.sign(max_lat) != np.sign(min_lat)):
-
-        # trough defined as lowest point between peaks (non-inclusive)
-        t_lats = lat[min(p_i) + 1:max(p_i)]
-        tr_tec = tec[min(p_i) + 1:max(p_i)]
-
-        # Limit trough lats to +/- 3 degrees Maglat
-        t_lats_lim = t_lats[(t_lats < 3) & (t_lats > -3)]
-        tp = (tr_tec[(t_lats < 3) & (t_lats > -3)]).argmin()
-        trough_min = min(tr_tec[(t_lats < 3) & (t_lats > -3)])
-        trough_lat = t_lats_lim[tp]  # latitude of trough minimum
-
-        # calculate the north and south points of both peaks
-        north_point_max, south_point_max = peak_span(pmax, tec,
-                                                     lat,
-                                                     trough_tec=trough_min,
-                                                     trough_lat=trough_lat)
-        north_point_min, south_point_min = peak_span(pmin, tec,
-                                                     lat,
-                                                     trough_tec=trough_min,
-                                                     trough_lat=trough_lat)
-
-        # Peak span tests
-        # north and south points should be on same side of equator
-        max_test = (np.sign(north_point_max) == np.sign(south_point_max))
-        min_test = (np.sign(north_point_min) == np.sign(south_point_min))
-        point_check = np.array([south_point_min, south_point_max,
-                                north_point_min, north_point_max])
-
-        # if the north or south point are very close to 0, then make true
-        # (same side of equator)
-        if (not max_test) & (min_test):
-            if (abs(north_point_max) < 0.5) ^ (abs(south_point_max) < 0.5):
-                max_test = True
-
-        if (max_test) & (not min_test):
-
-            # check if it is still within 0.5 degrees of equator
-            if (abs(north_point_min) < 0.5) ^ (abs(south_point_min) < 0.5):
-                min_test = True
-
-        # if either peak is between 0.5 and -0.5,
-        # then max test and min test are False
-        if (abs(max_lat) < 0.5) | (abs(min_lat) < 0.5):
-            max_test = False
-            min_test = False
-
-        # if the difference btween the north point and
-        # south point is < 1 degree, opposite test is False
-        if abs(north_point_min - south_point_min) < 1:
-            max_test = False
-
-        if abs(north_point_max - south_point_max) < 1:
-            min_test = False
-
-        # if the peaks are all undefined, both tests are false
-        if np.all(point_check == -99):
-            max_test = False
-            min_test = False
-
-        # if 1 peak has undefined span, opposite test false
-        if (south_point_min == -99) | (north_point_min == -99):
-            max_test = False
-        elif (south_point_max == -99) | (north_point_max == -99):
-            min_test = False
-
-        # if both max test and min test are True, then we have an eia type
-        if (max_test) & (min_test):
-            eia_state = "eia"  # state is eia, eia_saddle, or saddle
-
-            # Calculate slopes between min peak and trough
-            slope_min = (min_tec[0] - trough_min) / (min_lat[0] - trough_lat)
-            plats = [max_lat[0], min_lat[0]]
-
-            # if slope_min is > zero_slope
-            if abs(slope_min) > zero_slope:
-
-                # get difference between peak max_tec and peak min_tec
-                del_tec = max_tec[0] - min_tec[0]
-
-                # symmetric if < sym_tec
-                if abs(del_tec) <= sym_tec:
-                    eia_state += '_symmetric'
-                elif np.sign(max_lat) > 0:  # if not symmetric
-                    eia_state += '_north'
-                elif np.sign(max_lat) < 0:
-                    eia_state += '_south'
-            else:  # if not, eia_saddle
-                eia_state += '_saddle'
-                eia_state += saddle_ns(p1a, p2b, tec, lat)
-
-        # if not, send to single peak rules for peak that failed test
-        elif (max_test) & (not min_test):  # smaller peak spans over 0
-            eia_state, plats = single_peak_rules(pmin, tec, lat)
-        else:  # both are False or max peak is false
-            eia_state, plats = single_peak_rules(pmax, tec, lat)
-
-    elif abs(max_lat - min_lat) <= 1:  # peaks are too close together,
-        eia_state, plats = single_peak_rules(pmax, tec, lat)
-
-    # same side of magnetic equator, choose peak closest to equator
-    elif np.sign(max_lat) == np.sign(min_lat):
-        max_eq_dist = abs(0 - max_lat)
-        min_eq_dist = abs(0 - min_lat)
-        if max_eq_dist < min_eq_dist:
-            eia_state, plats = single_peak_rules(pmax, tec, lat)
-        else:
-            eia_state, plats = single_peak_rules(pmin, tec, lat)
-
-    return eia_state, plats
-
-
 def third_peak(z_lat, tec, lat, ghosts=False):
-    """ Look for a third peak
+    """Identify a third peak, if present.
 
-    Parameters:
-    -------------
+    Parameters
+    ----------
     z_lat : int
         single index of first maxima
     lat : array-like
         latitude
     tec : array-like
         tec or ne
-    ghosts : bool kwarg default False
-        if False, don't look for ghosts, if True look for ghosts
+    ghosts : bool
+        if False, don't look for ghosts, if True look for ghosts (default=False)
 
-    Returns:
-    ---------
-    p_third : array-like
-        array of latitudes if 3 peaks are found
+    Returns
+    -------
+    p_third : list-like
+        List of latitudes if 3 peaks are found
+
     """
     # calculate slopes between z-locs
     zlope, ztec, zlat = getzlopes(z_lat, lat, tec)
@@ -737,28 +505,32 @@ def third_peak(z_lat, tec, lat, ghosts=False):
 
 
 def peak_span(pm, tec, lat, trough_tec=-99, trough_lat=-99, div=0.5):
-    """ Calculate latitudinal span of the peak
-    Inputs:
+    """Calculate the latitudinal span of the peak.
+
+    Parameters
+    ----------
     pm : int
         peak index
     tec: array-like
         tec or ne
     lat: array-like
         latitude
-    trough_tec : kwarg double
-        tec at trough, minimum tec for double or triple peaks,
-        set to -99 if not specified
-    trough_lat : kwarg trough_lat
-        lat of trough if trough_tec reported, also report trough lat
-    div : kwarg double
-        decimal between 0 and 1 indicating desired peak width location
-        default: 0.5 indicating half-width
+    trough_tec : int or float
+        TEC at trough, minimum TEC for double or triple peaks, or unspecified
+        if set to -99 (default=-99)
+    trough_lat : int or float
+        Latitude of trough if `trough_tec` is also supplied (default=-99)
+    div : float
+        Decimal between 0 and 1 indicating desired peak width location; e.g.,
+        0.5 indicates the half-width (default=0.5)
 
-    output:
-    north_point : double
+    Returns
+    -------
+    north_point : float
         northern latitude of peak width
-    south_point : double
+    south_point : float
         southern latitude of peak width
+
     """
     # make sure that pm is an integer
     check_int = isinstance(pm, np.int64)
@@ -867,28 +639,36 @@ def peak_span(pm, tec, lat, trough_tec=-99, trough_lat=-99, div=0.5):
     return north_point, south_point
 
 
-def toomanymax(z_lat, lat, tec, max_lat=[-99]):
-    """ Reduce the number of peaks
+def toomanymax(z_lat, lat, tec, max_lat=None):
+    """Reduce the number of peaks.
+
     Parameters
-    ------
-        z_lat : array of latitudes at zero gradient points
-        lat : array of latitudes
-        tec : array of tec
-        max_lat : array of length 1
-            if a peak is already found,
-            it can be input to guarantee it is in the array new array
-            default is -99, undefined
-    Output
-    ------
-        z_lat : array-like
+    ----------
+    z_lat : array-like
+        array of latitudes at zero gradient points
+    lat : array-like
+        array of latitudes in degrees
+    tec : array-like
+        Totel electron content or plasma density
+    max_lat : array-like or NoneType
+        if a peak is already found, it can be input to guarantee it is in the
+        array new array (default=None)
+
+    Returns
+    -------
+    z_lat : array-like
         a new array of latitudes zero points
-        z_lat_new should contain a maximum of 5 values
-        [south edge, closest south, equator max, closest north, and north edge]
+    z_lat_new : list-like
+        A list that will contain a maximum of 5 values: south edge,
+        closest south, equator max, closest north, and north edge.
+
     """
-    # indices of z_lat
-    ilocz = []
-    for z in z_lat:
-        ilocz.append(abs(z - lat).argmin())
+    # Process the inputs
+    if max_lat is None:
+        max_lat = [-99]
+
+    # Initalize the indices of z_lat
+    ilocz = [abs(z - lat).argmin() for z in z_lat]
 
     # Corresponding TEC
     tecz = tec[ilocz[1:-1]]
@@ -903,30 +683,33 @@ def toomanymax(z_lat, lat, tec, max_lat=[-99]):
     tecz_eq = tecz[(latz >= -3) & (latz <= 3)]
     latz_eq = latz[(latz >= -3) & (latz <= 3)]
 
-    # set up new array
+    # Set up new list
     z_lat_new = []
     z_lat_new.append(z_lat[0])
 
-    if len(tecz_south) > 0:  # if there are south tec, get largest value
-
-        # if max_lat is not provided or it is in the north
+    # If there are south tec, get largest value
+    if len(tecz_south) > 0:
+        # If max_lat is not provided or it is in the north
         if (max_lat[0] == -99) | (np.sign(max_lat[0]) == 1):
-            z_lat_new.append(latz_south[-1])  # closest to equator
-
-        else:  # if a max_lat is provided and in south
+            # This is the value closest to the equator
+            z_lat_new.append(latz_south[-1])
+        else:
+            # If a max_lat is provided and in south
             z_lat_new.append(max_lat[0])
 
     if len(tecz_eq) > 0:  # look for max tec value in equatorial region
         tez = tecz_eq.argmax()
         z_lat_new.append(latz_eq[tez])
 
-    if len(tecz_north) > 0:  # look for max tec value in north
+    # Look for max tec value in north
+    if len(tecz_north) > 0:
 
         # if max_lat is not provided or it is in the south
         if (max_lat[0] == -99) | (np.sign(max_lat[0]) == -1):
-            z_lat_new.append(latz_north[0])  # closest to equator
-
-        else:  # if max_lat is in provided and in north
+            # This is the value closest to the equator
+            z_lat_new.append(latz_north[0])
+        else:
+            # If max_lat is in provided and in north, assign a new max
             z_lat_new.append(max_lat[0])
 
     z_lat_new.append(z_lat[-1])
@@ -938,11 +721,10 @@ def toomanymax(z_lat, lat, tec, max_lat=[-99]):
 
 
 def getzlopes(z_lat_ends, lat, tec):
-    """ Calculate slopes between zero points
-    it returns the slopes, the nearest latitude and tec
-    to the z points
+    """Calculate slopes between zero points.
+
     Parameters
-    -------------
+    ----------
     z_lat_ends : array-like
         gradient zero latitudes including end points
     lat : array-like
@@ -952,30 +734,43 @@ def getzlopes(z_lat_ends, lat, tec):
 
     Returns
     -------
-    zlope : array-like
+    zlope : list-like
         slope between zero points length is lengeth of z_lat_ends-1
-    ztec : array-like
+    ztec : list-like
         closest tec of z_lat_ends
-    zlat : array-like
+    zlat : list-like
         closest latitude of z_lat_ends
-    """
 
+    Notes
+    -----
+    This function returns the slopes, latitudes, and TEC or density nearest to
+    the z points.
+
+    """
+    # Initialize the output
     zlope = []
     ztec = []
     zlat = []
-    for zl in range(len(z_lat_ends) - 1):  # iterate through zero lats
+
+    # Iterate through zero lats
+    for zl in range(len(z_lat_ends) - 1):
         ilat1 = abs(z_lat_ends[zl] - lat).argmin()  # find index of nearest lat
         lat1 = lat[ilat1]  # get the latitude and tec of the first zero lat
         tec1 = tec[ilat1]
         ilat2 = abs
 
-        # find index of nearest next latitude
+        # Find index of nearest next latitude
         ilat2 = abs(z_lat_ends[zl + 1] - lat).argmin()
         lat2 = lat[ilat2]
         tec2 = tec[ilat2]
-        if lat2 - lat1 != 0:  # make sure that the latitudes are not the same
-            slope = (tec2 - tec1) / (lat2 - lat1)  # rise/run
-        else:  # if they are the same, slope = 0, no difference
+
+        # Either set the slope to zero or ensure that the latitudes differ
+        if abs(lat2 - lat1) > 1.0e-4:
+            # The latitudes are not the same, calculate the slope
+            slope = (tec2 - tec1) / (lat2 - lat1)
+        else:
+            # The latitudes are the same, prevent an infinite slope calculation
+            # by setting the value to zero
             slope = 0
 
         zlope.append(slope)
@@ -986,13 +781,15 @@ def getzlopes(z_lat_ends, lat, tec):
         if zl == len(z_lat_ends) - 2:
             ztec.append(tec2)
             zlat.append(lat2)
+
     return zlope, ztec, zlat
 
 
 def find_maxima(zlope, ztec, ilocz):
-    """ Find the local maxima based on the slopes
-    Parameters:
-    -------------
+    """Find the local maxima based on the slopes.
+
+    Parameters
+    ----------
     zlope : array-like
         slopes outputted from getzlopes
     ztec : array-like
@@ -1000,46 +797,46 @@ def find_maxima(zlope, ztec, ilocz):
     ilocz: array-like
         indices of zero locations
 
-    Returns:
-    ---------
-    zmaxima : array-like
-        maximum tec
-    zmaxi: array-like
-        indices of maximum tec
-    zminima : array-like
-        minimum tec
-    zmini : array-like
-        indices of minimum tec
+    Returns
+    -------
+    zmaxima : list-like
+        Maximum TEC
+    zmaxi: list-like
+        Indices of maximum TEC
+    zminima : list-like
+        Minimum TEC
+    zmini : list-like
+        Indices of minimum TEC
+
     """
-    # set up arrays
+    # Initalize the output
     zmaxima = []
     zmaxi = []
     zminima = []
     zmini = []
 
-    # go through slopes
+    # Cycle through the zero-slopes
     for s in range(len(zlope) - 1):
-
-        # positive to negative slope = local maximum
+        # Positive to negative slope = local maximum
         if (zlope[s] > 0) and (zlope[s + 1] < 0):
-
-            # exclude ends from being counted as max or min
+            # Exclude ends from being counted as max or min
             # len(ztec) is greater than len(zlope) by 1
             zmaxima.append(ztec[s + 1])
             zmaxi.append(ilocz[s + 1])
 
-        # negative slope to positive slope = local minimum
+        # Negative slope to positive slope = local minimum
         elif (zlope[s] < 0) and (zlope[s + 1] > 0):
             zminima.append(ztec[s + 1])
             zmini.append(ilocz[s + 1])
+
     return zmaxima, zmaxi, zminima, zmini
 
 
 def find_second_maxima(zlope, zdens, ilocz):
     """Find the secondary maxima.
 
-    Parameters:
-    -------------
+    Parameters
+    ----------
     zlope : array-like
         Slopes outputted from `getzlopes`
     zdens : array-like
@@ -1047,8 +844,8 @@ def find_second_maxima(zlope, zdens, ilocz):
     ilocz: array-like
         indices of zero locations
 
-    Returns:
-    ---------
+    Returns
+    -------
     sec_max : array-like
         secondary maxima tec
     sec_maxi : array-like
@@ -1099,7 +896,7 @@ def zero_max(lat, dens, zlats, maxes=None):
 
     """
     # Get indices of the zero points
-    ilocz = np.array([abs(z - lat).argmin() for z in zlats])
+    ilocz = np.array([abs(zlat - lat).argmin() for zlat in zlats])
 
     # Get the location and density at the potential peaks
     lat_all = lat[ilocz]
@@ -1129,26 +926,26 @@ def zero_max(lat, dens, zlats, maxes=None):
         dens_at = dens_all[ps]
 
         if (dens_at > dens_b4) & (dens_at > dens_af):
-            # if it is a peak
+            # Ff it is a peak, set the first index
             p1 = abs(lat - latz_south[ts]).argmin()
 
         else:
-            # check for center peak
+            # Check for a centeral peak
             lat_eq = lat_all[(lat_all > -1) & (lat_all < 1)]
             dens_eq = dens_all[(lat_all > -1) & (lat_all < 1)]
             if len(dens_eq) != 0:
                 te = dens_eq.argmax()
                 pe = abs(lat_all - lat_eq[te]).argmin()
 
-                # south check
+                # Check for a southern peak
                 dens_b4e = dens_all[pe - 1]
                 dens_afe = dens_all[pe + 1]
                 dens_ate = dens_all[pe]
                 if (dens_ate > dens_b4e) & (dens_ate > dens_afe):
-                    # if it's a peak
+                    # If it's a peak, set the first index
                     p1 = abs(lat - lat_eq[te]).argmin()
 
-        # if p1 is still None after a south and center check,
+        # If p1 is still None after a south and center check,
         # check for secondary maximum
         if p1 is None:
             if (dens_at > dens_b4) | (dens_at > dens_af):
@@ -1158,44 +955,44 @@ def zero_max(lat, dens, zlats, maxes=None):
         tn = densz_north.argmax()
         pn = abs(lat_all - latz_north[tn]).argmin()
 
-        # north check
+        # Check for a northern peak
         dens_b4 = dens_all[pn - 1]
         dens_af = dens_all[pn + 1]
         dens_at = dens_all[pn]
         if (dens_at > dens_b4) & (dens_at > dens_af):
-            # if it is a peak
+            # If it is a peak, set the second index
             p2 = abs(lat - latz_north[tn]).argmin()
         else:
-            # check for center peak instead
+            # Check for center peak instead
             lat_eq = lat_all[(lat_all > -1) & (lat_all < 1)]
             dens_eq = dens_all[(lat_all > -1) & (lat_all < 1)]
             if len(dens_eq) != 0:
                 te = dens_eq.argmax()
                 pe = abs(lat_all - lat_eq[te]).argmin()
 
-                # south check
+                # Check for a southern peak
                 dens_b4e = dens_all[pe - 1]
                 dens_afe = dens_all[pe + 1]
                 dens_ate = dens_all[pe]
                 if (dens_ate > dens_b4e) & (dens_ate > dens_afe):
-                    # if it's a peak
+                    # If it's a peak, set the second index
                     p2 = abs(lat - lat_eq[te]).argmin()
 
-        # if p2 is still None after a south and center check,
+        # If p2 is still None after a south and center check,
         # check for secondary maximum
         if p2 is None:
             if (dens_at > dens_b4) | (dens_at > dens_af):
-                # if it is a peak
+                # If it is a peak, set the second index
                 p2 = abs(lat - latz_north[tn]).argmin()
 
     if len(maxes) > 0:
-        # if one peak is given, replace either p1 or p2 with it
+        # If one peak is given, replace either p1 (souther) or p2 (northern)
         if lat[maxes[0]] > 0:
             p2 = maxes[0][0]
         elif lat[maxes[0]] < 0:
             p1 = maxes[0][0]
     else:
-        # no current maxes, use a sinlge max
+        # No current maxes, use a sinlge max
         if (p1 < 0) & (p2 < 0):
             t_last = densz.argmax()
             p1 = abs(lat - latz[t_last]).argmin()
