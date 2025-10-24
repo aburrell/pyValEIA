@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
 
-from pyValEIA.eia import clean_type
+from pyValEIA.eia.types import clean_type
 from pyValEIA.io import load
 from pyValEIA.stats import skill_score
 

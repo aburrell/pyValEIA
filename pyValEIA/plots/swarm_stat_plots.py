@@ -969,9 +969,9 @@ def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
         and Liemohn skill score
     """
     for i, s in enumerate(sats):
-        lss1_m1, lss2_m1, lss3_m1, lss4_m1 = Liemohn_Skill_Scores(
+        lss1_m1, lss2_m1, lss3_m1, lss4_m1 = skill_score.Liemohn_Skill_Scores(
             model1['skill'][model1['Sat'] == s])
-        lss1_m2, lss2_m2, lss3_m2, lss4_m2 = Liemohn_Skill_Scores(
+        lss1_m2, lss2_m2, lss3_m2, lss4_m2 = skill_score.Liemohn_Skill_Scores(
             model2['skill'][model2['Sat'] == s])
         if i == 0:
             lss_df = pd.DataFrame(
