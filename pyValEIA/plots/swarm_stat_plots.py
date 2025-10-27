@@ -4,11 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
-# Swarm Statistical Plotting
-# Created by Alanah Cardenas-O'Toole
-# Summer 2025
-# Latest update: 08/07/2025
-# Email alanahco@umich.edu
+"""Functions to plot Swarm skill score statistical outcomes."""
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -20,232 +16,8 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 from pyValEIA.io import load
-
-
-def clean_type(arr):
-    """ Simplifies EIA states into 4 base categories and 3 directions
-    Parameters
-    ----------
-    arr : array-like
-        array of eia states
-    Returns
-    -------
-    base_types : array-like of strings
-        states into 4 categories
-        eia
-        peak
-        trough
-        flat
-    base_dirs : array-like of string
-        state directions in 3 categories
-        north
-        south
-        neither
-
-    Notes
-    -----
-    flat
-    ----
-    flat_north
-    flat_south
-    flat
-
-    trough
-    -----
-    trough
-
-    peak
-    -----
-    peak
-    peak_north
-    peak_south
-
-    eia
-    ---
-    eia_symmetric
-    eia_north
-    eia_south
-    eia_saddle_peak
-    eia_saddle_peak_north
-    eia_saddle_peak_south
-    eia_ghost_symmetric
-    eia_ghost_north
-    eia_ghost_south
-    eia_ghost_peak_north
-    eia_ghost_peak_south
-    """
-    base_types = []
-    base_dirs = []
-
-    for typ in arr:
-
-        # Base Types
-        if 'eia' in typ:
-            base_types.append('eia')
-        elif (typ == 'peak_north') | (typ == 'peak_south') | (typ == 'peak'):
-            base_types.append('peak')
-        elif typ == 'trough':
-            base_types.append('trough')
-        elif 'flat' in typ:
-            base_types.append('flat')
-
-        # Base Directions
-        if 'north' in typ:
-            base_dirs.append('north')
-        elif 'south' in typ:
-            base_dirs.append('south')
-        else:
-            base_dirs.append('neither')
-
-    base_types = np.array(base_types)
-    base_dirs = np.array(base_dirs)
-
-    return base_types, base_dirs
-
-
-def state_check(obs_type, mod_type, state='eia'):
-    """calculates if something is H,M,C, or F using swarm as a
-    reference and nimo as the check
-
-    Parameters
-    ----------
-    obs_type : array-like
-        observation base types
-    mod_type : array-like
-        model base types
-    state : kwarg str
-        base state we are comparing
-        'eia', 'peak', 'flat', 'trough', 'north', 'south', 'neither'
-
-    Returns
-    -------
-    event_states : array-like of strings
-        categories of model to observations
-        H-hit
-        M-miss
-        C-correct negative
-        F-false alarm
-
-    """
-    event_states = []
-    for i, otype in enumerate(obs_type):
-        mtype = mod_type[i]
-        if otype == state:
-
-            # either a hit or a miss
-            if mtype == state:
-                event_states.append('H')
-            else:
-                event_states.append('M')
-        elif otype != state:
-
-            # either a hit or a miss
-            if mtype != state:
-                event_states.append('C')
-            else:
-                event_states.append('F')
-
-    event_states = np.array(event_states)
-
-    return event_states
-
-
-def Liemohn_Skill_Scores(event_states, coin=False):
-    """ Calcualted Skill scores from Liemohn 2024/2025
-
-    Parameters
-    ----------
-    event_states : array-like
-        array of event states 'H', 'M', 'F', and 'C'
-    coin : bool
-        if True, returns will be LSS for a coin
-        if False, returns will be LSS of event_states (default)
-    Returns
-    -------
-    LSS1 : double
-        Liemohn Skill Score 1
-    LSS2 : double
-        Liemohn Skill Score 2
-    LSS3 : double
-        Liemohn Skill Score 3
-    LSS4 : double
-        Liemohn Skill Score 4
-
-    Notes: Paper Liemohn 2025 under review
-    """
-    H = sum(event_states == 'H')
-    F = sum(event_states == 'F')
-    M = sum(event_states == 'M')
-    C = sum(event_states == 'C')
-
-    if coin:  # LSS of a coin toss
-        coin_HM = H + M
-        coin_FC = F + C
-
-        # HMFC of a coin is half of H+M for H and M and C+F for C and F
-        H = coin_HM / 2
-        M = coin_HM / 2
-        F = coin_FC / 2
-        C = coin_FC / 2
-
-    # Liemohn Skill Score 1
-    LSS1 = ((2 * H * C + M * C + H * F - H * M - M ** 2 - F ** 2 - F * C)
-            / (2 * (H + M) * (F + C)))
-
-    # Liemohn Skill Score 2 (LSS2t/LSS2b)
-    LSS2t = (H * ((H + M) ** 2 + 2 * (H + M) * (F + C))
-             - (H + M) ** 2 * (H + M + F))
-    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C))
-             - (H + M) ** 2 * (H + M + F))
-    LSS2 = LSS2t / LSS2b
-
-    # Liemohn Skill Score 3
-    LSS3 = ((H + C) - (M + F)) / (H + M + F + C)
-
-    # Liemohn Skill Score 4
-    LSS4 = ((H * (2 * (H + M) + F + C) - (H + M) * (H + M + F))
-            / ((H + M + F) * (2 * (H + M) + F + C) - (H + M) * (H + M + F)))
-
-    return LSS1, LSS2, LSS3, LSS4
-
-
-def PC_CSI(state, coin=False):
-    """ Calculates percent correct and critical success index
-
-    Parameters
-    ----------
-    event_states : array-like
-        array of event states 'H', 'M', 'F', and 'C'
-    coin : bool
-        if True, returns will be LSS for a coin
-        if False, returns will be LSS of event_states
-    Returns
-    -------
-    PC : double
-        percent correct as a decimal between 0 and 1
-    CSI : double
-        critical success index as a decimal between 0 and 1
-
-    """
-    H = sum(state == 'H')
-    F = sum(state == 'F')
-    M = sum(state == 'M')
-    C = sum(state == 'C')
-
-    if coin:  # Use a coin toss instead
-        coin_HM = H + M
-        coin_FC = F + C
-
-        # HMFC of a coin
-        H = coin_HM / 2
-        M = coin_HM / 2
-        F = coin_FC / 2
-        C = coin_FC / 2
-
-    PC = (H + C) / (H + M + F + C)
-    CSI = H / (H + M + F)
-
-    return PC, CSI
+from pyValEIA.stats import skill_score
+from pyValEIA.eia.types import clean_type
 
 
 def states_report_swarm(date_range, daily_dir, typ='eia',
@@ -370,15 +142,15 @@ def states_report_swarm(date_range, daily_dir, typ='eia',
     PyI['Sat'] = np.array(sats)
 
     # Compare PyIRI to Swarm and NIMO to Swarm
-    NiSw['skill'] = state_check(Sw[orientation].values,
-                                NiSw[orientation].values, state=typ)
-    PyI['skill'] = state_check(Sw[orientation].values, PyI[orientation].values,
-                               state=typ)
+    NiSw['skill'] = skill_score.state_check(Sw[orientation].values,
+                                            NiSw[orientation].values, state=typ)
+    PyI['skill'] = skill_score.state_check(Sw[orientation].values,
+                                           PyI[orientation].values, state=typ)
 
     return NiSw, Sw, PyI
 
 
-def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
+def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                    model2_name='Model2', PorC='PC',
                    DayNight=True, LT_range=[7, 19], coin=True):
     """ Plot LSS vs CSI or PC 4 panels (one for each LSS)
@@ -460,22 +232,28 @@ def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                 model2_sat = model2[model2['Sat'] == s]
 
             # Compute PC and CSI
-            PC_1, CSI_1 = PC_CSI(model1_sat['skill'].values, coin=False)
-            PC_2, CSI_2 = PC_CSI(model2_sat['skill'].values, coin=False)
-            PC_coin, CSI_coin = PC_CSI(model2_sat['skill'].values, coin=True)
-
-            # Compute Skill Scores
-            LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1 = Liemohn_Skill_Scores(
+            PC_1, CSI_1 = skill_score.calc_pc_and_csi(
                 model1_sat['skill'].values, coin=False)
-            LSS1_mod2, LSS2_mod2, LSS3_mod2, LSS4_mod2 = Liemohn_Skill_Scores(
+            PC_2, CSI_2 = skill_score.calc_pc_and_csi(
                 model2_sat['skill'].values, coin=False)
-            LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin = Liemohn_Skill_Scores(
+            PC_coin, CSI_coin = skill_score.calc_pc_and_csi(
                 model2_sat['skill'].values, coin=True)
 
-            # MAkE LSS arrays
-            LSS_mod1 = np.array([LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1])
-            LSS_mod2 = np.array([LSS1_mod2, LSS2_mod2, LSS3_mod2, LSS4_mod2])
-            LSS_coin = np.array([LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin])
+            # Compute Skill Scores
+            (lss1_mod1, lss2_mod1, lss3_mod1,
+             lss4_mod1) = skill_score.liemohn_skill_score(
+                model1_sat['skill'].values, coin=False)
+            (lss1_mod2, lss2_mod2, lss3_mod2,
+             lss4_mod2) = skill_score.liemohn_skill_score(
+                model2_sat['skill'].values, coin=False)
+            (lss1_coin, lss2_coin, lss3_coin,
+             lss4_coin) = skill_score.liemohn_skill_score(
+                model2_sat['skill'].values, coin=True)
+
+            # MAkE lss arrays
+            lss_mod1 = np.array([lss1_mod1, lss2_mod1, lss3_mod1, lss4_mod1])
+            lss_mod2 = np.array([lss1_mod2, lss2_mod2, lss3_mod2, lss4_mod2])
+            lss_coin = np.array([lss1_coin, lss2_coin, lss3_coin, lss4_coin])
 
             # Change label and variables depending on if user specified
             # CSI or PC
@@ -500,18 +278,18 @@ def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                 # Plot Satellite names as text
                 # only plot coin toss if specified as True
                 if coin:
-                    ax.text(exes[0], LSS_coin[i], s, fontsize=12, color=colc,
+                    ax.text(exes[0], lss_coin[i], s, fontsize=12, color=colc,
                             label=None)
-                ax.text(exes[1], LSS_mod1[i], s, fontsize=12, color=col1,
+                ax.text(exes[1], lss_mod1[i], s, fontsize=12, color=col1,
                         label=None)
-                ax.text(exes[2], LSS_mod2[i], s, fontsize=12, color=col2,
+                ax.text(exes[2], lss_mod2[i], s, fontsize=12, color=col2,
                         label=None)
 
                 # Set labels depending on plot number
                 if (i == 0) | (i == 2):
                     ax.set_ylabel('Skill Score')
                 ax.set_xlabel(lab)
-                ax.set_title('LSS' + str(i + 1))
+                ax.set_title('lss' + str(i + 1))
 
                 # Legend:
                 # If you want to plot the legend for both day and night colors
@@ -544,7 +322,7 @@ def LSS_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     return fig
 
 
-def one_model_LSS_plot_Swarm(model1, eia_type, date_range, model_name='Model',
+def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
                              PorC='PC', DayNight=True, LT_range=[7, 19],
                              coin=True):
     """ Plot LSS vs CSI or PC 4 panels (one for each LSS) for 1 model alone
@@ -615,18 +393,22 @@ def one_model_LSS_plot_Swarm(model1, eia_type, date_range, model_name='Model',
                 model1_sat = model1[model1['Sat'] == s]
 
             # Compute PC and CSI
-            PC_1, CSI_1 = PC_CSI(model1_sat['skill'].values, coin=False)
-            PC_coin, CSI_coin = PC_CSI(model1_sat['skill'].values, coin=True)
-
-            # Compute Skill Scores
-            LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1 = Liemohn_Skill_Scores(
+            PC_1, CSI_1 = skill_score.calc_pc_and_csi(
                 model1_sat['skill'].values, coin=False)
-            LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin = Liemohn_Skill_Scores(
+            PC_coin, CSI_coin = skill_score.calc_pc_and_csi(
                 model1_sat['skill'].values, coin=True)
 
-            # MAkE LSS arrays
-            LSS_mod1 = np.array([LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1])
-            LSS_coin = np.array([LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin])
+            # Compute Skill Scores
+            (lss1_mod1, lss2_mod1, lss3_mod1,
+             lss4_mod1) = skill_score.liemohn_skill_score(
+                model1_sat['skill'].values, coin=False)
+            (lss1_coin, lss2_coin, lss3_coin,
+             lss4_coin) = skill_score.liemohn_skill_score(
+                model1_sat['skill'].values, coin=True)
+
+            # MAkE lss arrays
+            lss_mod1 = np.array([lss1_mod1, lss2_mod1, lss3_mod1, lss4_mod1])
+            lss_coin = np.array([lss1_coin, lss2_coin, lss3_coin, lss4_coin])
 
             # Change label and variables depending on if user specified
             # CSI or PC
@@ -651,16 +433,16 @@ def one_model_LSS_plot_Swarm(model1, eia_type, date_range, model_name='Model',
                 # Plot Satellite names as text
                 # only plot coin toss if specified as True
                 if coin:
-                    ax.text(exes[0], LSS_coin[i], s, fontsize=12, color=colc,
+                    ax.text(exes[0], lss_coin[i], s, fontsize=12, color=colc,
                             label=None)
-                ax.text(exes[1], LSS_mod1[i], s, fontsize=12, color=col1,
+                ax.text(exes[1], lss_mod1[i], s, fontsize=12, color=col1,
                         label=None)
 
                 # Set labels depending on plot number
                 if (i == 0) | (i == 2):
                     ax.set_ylabel('Skill Score')
                 ax.set_xlabel(lab)
-                ax.set_title('LSS' + str(i + 1))
+                ax.set_title('lss' + str(i + 1))
 
                 # Legend:
                 # If you want to plot the legend for both day and night colors
@@ -804,20 +586,21 @@ def decision_table_sat(states, eia_type='eia',
 
         # Sum total HMFCs
 
-        H = sum(states['skill'][states['Sat'] == s] == 'H')
-        F = sum(states['skill'][states['Sat'] == s] == 'F')
-        M = sum(states['skill'][states['Sat'] == s] == 'M')
-        C = sum(states['skill'][states['Sat'] == s] == 'C')
+        hit = sum(states['skill'][states['Sat'] == s] == 'H')
+        falarm = sum(states['skill'][states['Sat'] == s] == 'F')
+        miss = sum(states['skill'][states['Sat'] == s] == 'M')
+        corneg = sum(states['skill'][states['Sat'] == s] == 'C')
         if i == 0:
             df = pd.DataFrame(
-                [[H, M], [F, C]],
+                [[hit, miss], [falarm, corneg]],
                 index=pd.MultiIndex.from_product(
                     [['Swarm ' + s], [eia_type, 'Non-' + eia_type]]),
                 columns=pd.MultiIndex.from_product(
                     [[model_name], [eia_type, 'Non-' + eia_type]]))
         else:
-            df.loc[('Swarm ' + s, eia_type), :] = np.array([H, M])
-            df.loc[('Swarm ' + s, 'Non-' + eia_type), :] = np.array([F, C])
+            df.loc[('Swarm ' + s, eia_type), :] = np.array([hit, miss])
+            df.loc[('Swarm ' + s, 'Non-' + eia_type), :] = np.array([
+                falarm, corneg])
 
     df.style
     return df
@@ -1160,7 +943,7 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     return fig
 
 
-def LSS_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
+def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
                   sats=['A', 'B', 'C']):
     """ Neat table including the Liemohn Skill Scores 1-4
 
@@ -1181,50 +964,50 @@ def LSS_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
         can specify just 1 or 2
     Returns
     -------
-    LSS_df : dataframe
+    lss_df : dataframe
         dataframe in table format separated by satellite
         and Liemohn skill score
     """
     for i, s in enumerate(sats):
-        LSS1_m1, LSS2_m1, LSS3_m1, LSS4_m1 = Liemohn_Skill_Scores(
+        lss1_m1, lss2_m1, lss3_m1, lss4_m1 = skill_score.Liemohn_Skill_Scores(
             model1['skill'][model1['Sat'] == s])
-        LSS1_m2, LSS2_m2, LSS3_m2, LSS4_m2 = Liemohn_Skill_Scores(
+        lss1_m2, lss2_m2, lss3_m2, lss4_m2 = skill_score.Liemohn_Skill_Scores(
             model2['skill'][model2['Sat'] == s])
         if i == 0:
-            LSS_df = pd.DataFrame(
-                [[LSS1_m1, LSS1_m2], [LSS2_m1, LSS2_m2],
-                 [LSS3_m1, LSS3_m2], [LSS4_m1, LSS4_m2]],
+            lss_df = pd.DataFrame(
+                [[lss1_m1, lss1_m2], [lss2_m1, lss2_m2],
+                 [lss3_m1, lss3_m2], [lss4_m1, lss4_m2]],
                 index=pd.MultiIndex.from_product(
-                    [['Swarm ' + s], ['LSS1', 'LSS2', 'LSS3', 'LSS4']]),
+                    [['Swarm ' + s], ['lss1', 'lss2', 'lss3', 'lss4']]),
                 columns=[model1_name, model2_name])
         else:
-            LSS_df.loc[('Swarm ' + s,
-                        'LSS1'), :] = np.array([LSS1_m1, LSS1_m2])
-            LSS_df.loc[('Swarm ' + s,
-                        'LSS2'), :] = np.array([LSS2_m1, LSS2_m2])
-            LSS_df.loc[('Swarm ' + s,
-                        'LSS3'), :] = np.array([LSS3_m1, LSS3_m2])
-            LSS_df.loc[('Swarm ' + s,
-                        'LSS4'), :] = np.array([LSS4_m1, LSS4_m2])
+            lss_df.loc[('Swarm ' + s,
+                        'LSS1'), :] = np.array([lss1_m1, lss1_m2])
+            lss_df.loc[('Swarm ' + s,
+                        'LSS2'), :] = np.array([lss2_m1, lss2_m2])
+            lss_df.loc[('Swarm ' + s,
+                        'LSS3'), :] = np.array([lss3_m1, lss3_m2])
+            lss_df.loc[('Swarm ' + s,
+                        'LSS4'), :] = np.array([lss4_m1, lss4_m2])
 
-    LSS_df.style
-    return LSS_df
+    lss_df.style
+    return lss_df
 
 
-def style_LSS_table(LSS_df, sat_list=['A', 'B', 'C']):
+def style_lss_table(lss_df, sat_list=['A', 'B', 'C']):
     """ Style decision table using
 
     Parameters
     ----------
-    LSS_df : dataframe
-        dataframe created by LSS_table_sat
+    lss_df : dataframe
+        dataframe created by lss_table_sat
     sat_list: list of strings kwarg
-        satellite list for LSS_df
+        satellite list for lss_df
     Returns
     -------
     LSS table with dividers
     """
-    s = LSS_df.style.format()
+    s = lss_df.style.format()
 
     for sat in sat_list:
         l0 = 'Swarm ' + sat

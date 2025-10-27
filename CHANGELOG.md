@@ -9,6 +9,7 @@ Summary of all changes made since the first release
 * ENH: added utils submodule with routines to calculate coordinates
 * ENH: added plots submodule with plotting routines
 * ENH: added stats submodule with statistics routines
+* ENH: added eia submodule with routines to identify and classify the EIA
 
 
 0.0.1 (2025-08-15)

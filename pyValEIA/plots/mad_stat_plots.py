@@ -13,135 +13,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
 
+from pyValEIA.eia.types import clean_type
 from pyValEIA.io import load
-
-
-def clean_type(arr):
-    """ Simplifies EIA states into 4 base categories and 3 directions
-    Parameters
-    ----------
-    arr : array-like
-        array of eia states
-    Returns
-    -------
-    base_types : array-like of strings
-        states into 4 categories
-        eia
-        peak
-        trough
-        flat
-    base_dirs : array-like of string
-        state directions in 3 categories
-        north
-        south
-        neither
-
-    Notes
-    -----
-    flat
-    ----
-    flat_north
-    flat_south
-    flat
-
-    trough
-    -----
-    trough
-
-    peak
-    -----
-    peak
-    peak_north
-    peak_south
-
-    eia
-    ---
-    eia_symmetric
-    eia_north
-    eia_south
-    eia_saddle_peak
-    eia_saddle_peak_north
-    eia_saddle_peak_south
-    eia_ghost_symmetric
-    eia_ghost_north
-    eia_ghost_south
-    eia_ghost_peak_north
-    eia_ghost_peak_south
-    """
-    base_types = []
-    base_dirs = []
-
-    for typ in arr:
-
-        # Base Types
-        if 'eia' in typ:
-            base_types.append('eia')
-        elif (typ == 'peak_north') | (typ == 'peak_south') | (typ == 'peak'):
-            base_types.append('peak')
-        elif typ == 'trough':
-            base_types.append('trough')
-        elif 'flat' in typ:
-            base_types.append('flat')
-
-        # Base Directions
-        if 'north' in typ:
-            base_dirs.append('north')
-        elif 'south' in typ:
-            base_dirs.append('south')
-        else:
-            base_dirs.append('neither')
-
-    base_types = np.array(base_types)
-    base_dirs = np.array(base_dirs)
-
-    return base_types, base_dirs
-
-
-def state_check(obs_type, mod_type, state='eia'):
-    """calculates if something is H,M,C, or F using swarm as a
-    reference and nimo as the check
-
-    Parameters
-    ----------
-    obs_type : array-like
-        observation base types
-    mod_type : array-like
-        model base types
-    state : kwarg str
-        base state we are comparing
-        'eia', 'peak', 'flat', 'trough', 'north', 'south', 'neither'
-
-    Returns
-    -------
-    event_states : array-like of strings
-        categories of model to observations
-        H-hit
-        M-miss
-        C-correct negative
-        F-false alarm
-
-    """
-    event_states = []
-    for i, otype in enumerate(obs_type):
-        mtype = mod_type[i]
-        if otype == state:
-
-            # either a hit or a miss
-            if mtype == state:
-                event_states.append('H')
-            else:
-                event_states.append('M')
-        elif otype != state:
-
-            # either a hit or a miss
-            if mtype != state:
-                event_states.append('C')
-            else:
-                event_states.append('F')
-
-    event_states = np.array(event_states)
-
-    return event_states
+from pyValEIA.stats import skill_score
 
 
 def states_report_mad(date_range, daily_dir, typ='eia', mad_lon=-90):
@@ -232,108 +106,11 @@ def states_report_mad(date_range, daily_dir, typ='eia', mad_lon=-90):
     Mad['LT'] = np.array(lts)
 
     # Compare PyIRI to Swarm and NIMO to Swarm
-    NiMad['skill'] = state_check(Mad[orientation].values,
-                                 NiMad[orientation].values, state=typ)
+    NiMad['skill'] = skill_score.state_check(Mad[orientation].values,
+                                             NiMad[orientation].values,
+                                             state=typ)
 
     return NiMad, Mad
-
-
-def Liemohn_Skill_Scores(event_states, coin=False):
-    """ Calcualted Skill scores from Liemohn 2024/2025
-
-    Parameters
-    ----------
-    event_states : array-like
-        array of event states 'H', 'M', 'F', and 'C'
-    coin : bool
-        if True, returns will be LSS for a coin
-        if False, returns will be LSS of event_states
-    Returns
-    -------
-    LSS1 : double
-        Liemohn Skill Score 1
-    LSS2 : double
-        Liemohn Skill Score 2
-    LSS3 : double
-        Liemohn Skill Score 3
-    LSS4 : double
-        Liemohn Skill Score 4
-
-    Notes: Paper Liemohn 2025 under review
-    """
-    H = sum(event_states == 'H')
-    F = sum(event_states == 'F')
-    M = sum(event_states == 'M')
-    C = sum(event_states == 'C')
-
-    if coin:  # LSS of a coin toss
-        coin_HM = H + M
-        coin_FC = F + C
-
-        # HMFC of a coin is half of H+M for H and M and C+F for C and F
-        H = coin_HM / 2
-        M = coin_HM / 2
-        F = coin_FC / 2
-        C = coin_FC / 2
-
-    # Liemohn Skill Score 1
-    LSS1 = ((2 * H * C + M * C + H * F - H * M - M ** 2 - F ** 2 - F * C)
-            / (2 * (H + M) * (F + C)))
-
-    # Liemohn Skill Score 2 (LSS2t/LSS2b)
-    LSS2t = (H * ((H + M) ** 2 + 2 * (H + M) * (F + C))
-             - (H + M) ** 2 * (H + M + F))
-    LSS2b = ((H + M + F) * ((H + M) ** 2 + 2 * (H + M) * (F + C))
-             - (H + M) ** 2 * (H + M + F))
-    LSS2 = LSS2t / LSS2b
-
-    # Liemohn Skill Score 3
-    LSS3 = ((H + C) - (M + F)) / (H + M + F + C)
-
-    # Liemohn Skill Score 4
-    LSS4 = ((H * (2 * (H + M) + F + C) - (H + M) * (H + M + F))
-            / ((H + M + F) * (2 * (H + M) + F + C) - (H + M) * (H + M + F)))
-
-    return LSS1, LSS2, LSS3, LSS4
-
-
-def PC_CSI(state, coin=False):
-    """ Calculates percent correct and critical success index
-
-    Parameters
-    ----------
-    event_states : array-like
-        array of event states 'H', 'M', 'F', and 'C'
-    coin : bool
-        if True, returns will be LSS for a coin
-        if False, returns will be LSS of event_states
-    Returns
-    -------
-    PC : double
-        percent correct as a decimal between 0 and 1
-    CSI : double
-        critical success index as a decimal between 0 and 1
-
-    """
-    H = sum(state == 'H')
-    F = sum(state == 'F')
-    M = sum(state == 'M')
-    C = sum(state == 'C')
-
-    if coin:  # Use a coin toss instead
-        coin_HM = H + M
-        coin_FC = F + C
-
-        # HMFC of a coin
-        H = coin_HM / 2
-        M = coin_HM / 2
-        F = coin_FC / 2
-        C = coin_FC / 2
-
-    PC = (H + C) / (H + M + F + C)
-    CSI = H / (H + M + F)
-
-    return PC, CSI
 
 
 def Mad_LSS_plot(model1, eia_type, date_range, model_name='Model',
@@ -406,13 +183,17 @@ def Mad_LSS_plot(model1, eia_type, date_range, model_name='Model',
         colc = colsc[lo]
 
         # Compute PC and CSI
-        PC_1, CSI_1 = PC_CSI(model_use['skill'].values, coin=False)
-        PC_coin, CSI_coin = PC_CSI(model_use['skill'].values, coin=True)
+        PC_1, CSI_1 = skill_score.calc_pc_and_csi(
+            model_use['skill'].values, coin=False)
+        PC_coin, CSI_coin = skill_score.calc_pc_and_csi(
+            model_use['skill'].values, coin=True)
 
         # Compute Skill Scores
-        LSS1_mod1, LSS2_mod1, LSS3_mod1, LSS4_mod1 = Liemohn_Skill_Scores(
-            model_use['skill'].values, coin=False)
-        LSS1_coin, LSS2_coin, LSS3_coin, LSS4_coin = Liemohn_Skill_Scores(
+        (LSS1_mod1, LSS2_mod1, LSS3_mod1,
+         LSS4_mod1) = skill_score.liemohn_skill_score(
+             model_use['skill'].values, coin=False)
+        (LSS1_coin, LSS2_coin, LSS3_coin,
+         LSS4_coin) = skill_score.liemohn_skill_score(
             model_use['skill'].values, coin=True)
 
         # MAkE LSS arrays
