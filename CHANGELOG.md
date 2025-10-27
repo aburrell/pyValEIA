@@ -10,6 +10,7 @@ Summary of all changes made since the first release
 * ENH: added plots submodule with plotting routines
 * ENH: added stats submodule with statistics routines
 * ENH: added eia submodule with routines to identify and classify the EIA
+* STY: cleaned up the docstrings to comply with PEP8
 
 
 0.0.1 (2025-08-15)
