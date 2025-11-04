@@ -4,9 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
-# Madrigal Statistics
-# Created 08/07/2025
-# By alanahco@umich.edu
+"""Functions for visualizing Madrigal TEC EIA statistics."""
 
 import numpy as np
 import matplotlib.pyplot as plt

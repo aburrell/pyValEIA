@@ -4,6 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+"""Functions for cleaning data products."""
 
 import numpy as np
 

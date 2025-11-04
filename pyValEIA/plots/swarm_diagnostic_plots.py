@@ -4,6 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+"""Functions for plotting Swarm data and evaluating EIA detection."""
 
 import datetime as dt
 import matplotlib.pyplot as plt
@@ -489,7 +490,6 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
                         hr_var='hour', min_var='minute', tec_var='tec',
                         hmf2_var='hmf2', nmf2_var='nmf2', mod_cadence=15,
                         max_tdif=15, offset=0):
-
     """Plot Swarm and model data for 1 day and create file of EIA info.
 
     Parameters

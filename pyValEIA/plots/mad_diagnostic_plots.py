@@ -4,6 +4,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+"""Functions for plotting Madrigal TEC data and evaluating EIA detection."""
 
 import datetime as dt
 import matplotlib.gridspec as gridspec
@@ -144,7 +145,8 @@ def madrigal_model_world_maps(stime, mad_dc, mod_map):
 
 def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
                           model_name='NIMO', max_nan=20, fosi=14):
-    """ Plot 1 madrigal nimo plot
+    """Create one Madrigal TEC vs model data plot.
+
     Parameters
     ----------
     mad_dc : dict
@@ -332,7 +334,6 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                          hr_var='hour', min_var='minute', tec_var='tec',
                          hmf2_var='hmf2', nmf2_var='nmf2', mod_cadence=15,
                          max_tdif=20):
-
     """Create daily files for Madrigal/model and daily plots.
 
     Parameters
