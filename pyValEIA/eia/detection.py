@@ -69,6 +69,11 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         Additional peak latitudes, if additional peak(s) are between the EIA
         double peaks and the type is not ghost; these are likely artifacts
 
+    Raises
+    ------
+    ValueError
+        If inputs do not allow for EIA detection.
+
     """
     # Test the input
     if den_type.lower() not in ['ne', 'tec']:
@@ -80,6 +85,9 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
 
     # Calculate the latitude range
     lat_span = int(max(lat) - min(lat))
+
+    if lat_span <= 3:
+        raise ValueError('Insufficient data to calculate EIA')
 
     # sort from south hemisphere to north hemisphere
     sort_in = np.argsort(lat)
