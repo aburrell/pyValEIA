@@ -17,28 +17,31 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import pydarn
 
-from pyValEIA.utils.EIA_type_detection import eia_complete
+from pyValEIA import logger
+from pyValEIA.eia.detection import eia_complete
 from pyValEIA import io
 from pyValEIA.utils import coords
-from pyValEIA.utils import nimo_conjunctions
+from pyValEIA.utils import conjunctions
+from pyValEIA.utils.clean import mad_tec_clean
 
 
-def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
-    """ Plot world maps for both nimo and madrigal tec
+def madrigal_model_world_maps(stime, mad_dc, mod_map):
+    """Plot world maps for both model data and Madrigal TEC.
 
     Parameters
     ----------
-    stime: datetime object
+    stime : datetime object
         Universal time for the tec data and solar terminator
-    mad_dc : dictionary
+    mad_dc : dict
         Madrigal data input
-    nimo_map : dictionary
+    mod_map : dict
         NIMO data input
+
     Returns
     -------
     fig : figure
         matplotlib figure with 2 panels (Madrigal (top) NIMO (bottom))
-        Not automatically saved
+
     """
     # Get antisolar position and the arc (terminator) at the given height
     antisolarpsn, arc, ang = pydarn.terminator(stime, 300)
@@ -49,7 +52,8 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     lats = []
     lons = []
 
-    for b in range(-180, 180, 1):  # Iterate over longitudes from -180 to 180
+    # Iterate over longitudes from -180 to 180 with a one degree resolution
+    for b in range(-180, 180, 1):
         lat, lon = pydarn.GeneralUtils.new_coordinate(lat_antisolar,
                                                       lon_antisolar, arc, b,
                                                       R=pydarn.Re)
@@ -92,7 +96,7 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     # Set gray facecolor with alpha = 0.7
     ax.set_facecolor((0.5, 0.5, 0.5, 0.7))
 
-    cbar.set_label("Madrigal TEC")
+    cbar.set_label("Madrigal TEC (TECU)")
 
     # x and y labels
     ax.text(-215, -40, 'Geographic Latitude', color='k', rotation=90)
@@ -109,8 +113,8 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     # Add coastlines
     ax.add_feature(cfeature.COASTLINE)
 
-    heatmap = ax.pcolormesh(nimo_map['glon'], nimo_map['glat'],
-                            nimo_map['tec'], cmap='cividis',
+    heatmap = ax.pcolormesh(mod_map['glon'], mod_map['glat'],
+                            mod_map['tec'], cmap='cividis',
                             transform=ccrs.PlateCarree())
     plt.rcParams.update({'font.size': 15})
     lons = np.squeeze(lons)
@@ -121,6 +125,7 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     leg = ax.legend(framealpha=0, loc='upper right')
     for text in leg.get_texts():
         text.set_color('white')
+
     # force x and y labels
     ax.text(-215, -40, 'Geographic Latitude', color='k', rotation=90)
     ax.text(-50, -110, 'Geographic Longitude', color='k')
@@ -137,122 +142,34 @@ def madrigal_nimo_world_maps(stime, mad_dc, nimo_map):
     return fig
 
 
-def detect_outliers(arr):
-    """ Detect outliers in an array
-    Parameters:
-    -----------
-    arr: numpy array object
-        set of numbers
-    Returns:
-    --------
-    outlier_indices: numpy array object
-        array of indices where arr has outliers
-    Notes:
-    ------
-    Uses InterQuartile Range (IQR)
-    IQR = q3-q1
-    outlier > q3 + 1.5*IQR
-    outlier < q1 - 1.5*IQR
-    """
-    arr = np.array(arr)
-    q1 = np.percentile(arr[np.isfinite(arr)], 25)
-    q3 = np.percentile(arr[np.isfinite(arr)], 75)
-    IQR = q3 - q1
-    upper_lim = q3 + 1.5 * IQR
-    lower_lim = q1 - 1.5 * IQR
-    outlier_indices = np.where((arr > upper_lim) | (arr < lower_lim))[0]
-
-    return outlier_indices
-
-
-def mad_tec_clean(mad_tec_meas, mad_std_meas, mad_mlat, mlat_val, max_nan=20):
-    """ clean madrigal tec data
-    Parameters
-    ----------
-    mad_tec_meas : array-like
-        averaged tec over longitude and time
-    mad_std_meas : array-like
-        standard deviation of mad_tec_meas
-    mad_mlat : array-like
-        magnetic laittude of mad_tec_meas
-    mlat_val : int
-        magnetic latitude cutoff
-    max_nan : double
-        Maximum acceptable percent nan values in a pass
-    """
-    # minimum is 20 degree cutoff on either side
-    # filter by by magnetic latitude (start with given mlat_val)
-    mad_tec_lat = mad_tec_meas[abs(mad_mlat) < mlat_val]
-    mad_std_lat = mad_std_meas[abs(mad_mlat) < mlat_val]
-
-    if np.all(mad_tec_lat[np.isfinite(mad_tec_lat)] < 5):
-        mad_tec_lat[:] = np.nan
-        mad_std_lat[:] = np.nan
-
-    nan_perc = (np.isnan(mad_tec_lat).mean() * 100)
-
-    if nan_perc != 100:
-
-        # remove oultier tec values
-        out_tec = detect_outliers(mad_tec_lat)
-        mad_tec_lat[out_tec] = np.nan
-        mad_std_lat[out_tec] = np.nan
-
-    # calculate nan percent
-    nan_perc = (np.isnan(mad_tec_lat).mean() * 100)
-    mlat_try = mlat_val
-
-    # if nan_perc is greater than max_nan,
-    # we want to try to get it below 20 until we hit max_nan degrees mag lat
-    if (nan_perc > max_nan) & (nan_perc < 80):
-        while (nan_perc > max_nan) & (mlat_try >= max_nan) & (nan_perc < 80):
-            mlat_try = mlat_try - 1
-            mad_tec_lat = mad_tec_meas[abs(mad_mlat) < mlat_try]
-            mad_std_lat = mad_std_meas[abs(mad_mlat) < mlat_try]
-
-            # remove oultier tec values
-            out_tec = detect_outliers(mad_tec_lat)
-            mad_tec_lat[out_tec] = np.nan
-            mad_std_lat[out_tec] = np.nan
-
-            # calculate nan percent
-            nan_perc = (np.isnan(mad_tec_lat).mean() * 100)
-
-    # if all data is below 5, then remove completely
-    if np.all(mad_tec_lat[np.isfinite(mad_tec_lat)] < 5):
-        mad_tec_lat[:] = np.nan
-        mad_std_lat[:] = np.nan
-
-    # calculate nan percent one final time
-    nan_perc = (np.isnan(mad_tec_lat).mean() * 100)
-
-    return mad_tec_lat, mad_std_lat, nan_perc, mlat_try
-
-
-def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
-                         max_nan=20, fosi=14):
+def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
+                          model_name='NIMO', max_nan=20, fosi=14):
     """ Plot 1 madrigal nimo plot
     Parameters
     ----------
-    mad_dc : dictionary
-        dict of madrigal data
-    nimo_dc : dictionary
-        dict of nimo data
+    mad_dc : dict
+        dict of Madrigal TEC data
+    mod_dc : dict
+        dict of model data
     lon_start : int
         starting longitude for plot. i.e. 90
     stime : datetime
         datetime for plot
     mlat_val : int
         magnetic latitude cutoff
-    max_nan : double kwarg
-        Maximum acceptable percent nan values in a pass
-    fosi : int kwarg
-        font size
+    model_name : str
+        Name of model (default='NIMO')
+    max_nan : float
+        Maximum acceptable percent nan values in a pass (default=20)
+    fosi : int
+        font size (default=14)
+
     Returns
     -------
-    single figure of madrigal and nimo not automatically saved
-    """
+    fig : mpl.Figure
+        Fingle figure of madrigal and input model, not automatically saved
 
+    """
     # get time index and adjust if minute is not a factor of 5 lik mad data
     time_remain = stime.minute % 5
     time_min = stime.minute
@@ -270,6 +187,7 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
     fig = plt.figure(figsize=(25, 24))
     plt.rcParams.update({'font.size': fosi})
     mlat_val_og = mlat_val
+
     for i in range(12):
         mlat_val = mlat_val_og
 
@@ -315,8 +233,8 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
 
         # get nimo data ------------------------------------------------
         glon_val = (lon_max + lon_min) / 2
-        nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
-            nimo_dc, mlat_val, glon_val, stime)
+        mod_df, mod_map = conjunctions.mad_conjunction(
+            mod_dc, mlat_val, glon_val, stime)
 
         # Add legend as first panel
         if i == 0:
@@ -331,7 +249,8 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
                             mad_tec_meas + mad_std_meas, color='g', alpha=0.2,
                             label='Tec +/- dTec')
             ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
-                    mad_tec_meas, linestyle='--', color='k', label='NIMO TEC')
+                    mad_tec_meas, linestyle='--', color='k',
+                    label='{:s} TEC'.format(model_name))
             ax.set_ylim([-99, -89])
             ax.set_xlim([-100, -99])
             ax.spines['top'].set_visible(False)
@@ -353,13 +272,13 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
                             mad_tec_meas + mad_std_meas, color='g', alpha=0.2,
                             label=None)
 
-            nlat = nimo_df['Mag_Lat'].values
-            nden = nimo_df['tec'].values
-            (nimo_lat, nimo_filt, eia_type_slope, z_lat, plats,
+            nlat = mod_df['Mag_Lat'].values
+            nden = mod_df['tec'].values
+            (mod_lat, mod_filt, eia_type_slope, z_lat, plats,
              p3) = eia_complete(nlat, nden, 'tec', interpolate=2,
                                 barrel_envelope=False)
 
-            ax.plot(nimo_df['Mag_Lat'], nimo_df['tec'], linestyle='--',
+            ax.plot(mod_df['Mag_Lat'], mod_df['tec'], linestyle='--',
                     color='k', label=eia_type_slope)
             if lon_min < 180:
                 mad_df["tec"] = mad_tec_meas
@@ -373,13 +292,11 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
                 lat_use = mad_df["Mag_Lat"].values
                 den_mad = mad_df["tec"].values
 
-                (mad_lats, mad_filt,
-                 eia_type_slope,
-                 z_loc, plats, p3) = eia_complete(lat_use, den_mad, 'tec',
-                                                  filt=filt,
-                                                  interpolate=2,
-                                                  barrel_envelope=False,
-                                                  barrel_radius=3)
+                # TODO: add kwarg options to figure input.
+                (mad_lats, mad_filt, eia_type_slope, z_loc, plats,
+                 p3) = eia_complete(lat_use, den_mad, 'tec', filt=filt,
+                                    interpolate=2, barrel_envelope=False,
+                                    barrel_radius=3)
 
                 ax.plot(mad_lats, mad_filt, color='orange',
                         label=eia_type_slope)
@@ -403,125 +320,131 @@ def mad_nimo_single_plot(mad_dc, nimo_dc, lon_start, stime, mlat_val,
     return fig
 
 
-def NIMO_MAD_DailyFile(
-        start_day, mad_file_dir, nimo_file_dir, mlat_val=30,
-        lon_start=-90, file_save_dir='', fig_on=True, fig_save_dir='',
-        max_nan=20, mad_filt='barrel_average', mad_interpolate=2,
-        mad_envelope=False, mad_barrel=3, mad_window=3, nimo_filt='',
-        nimo_interpolate=2, nimo_envelope=False, nimo_barrel=3, nimo_window=3,
-        fosi=15, nimo_name_format='NIMO_AQ_%Y%j', ne_var='dene', lon_var='lon',
-        lat_var='lat', alt_var='alt', hr_var='hour', min_var='minute',
-        tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2', nimo_cadence=15,
-        max_tdif=20):
+def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
+                         model_name='NIMO', mod_load_func=io.load.load_nimo,
+                         mlat_val=30, lon_start=-90, file_save_dir='',
+                         fig_on=True, fig_save_dir='', max_nan=20,
+                         mad_filt='barrel_average', mad_interpolate=2,
+                         mad_envelope=False, mad_barrel=3, mad_window=3,
+                         mod_filt='', mod_interpolate=2, mod_envelope=False,
+                         mod_barrel=3, mod_window=3, fosi=15, ne_var='dene',
+                         lon_var='lon', lat_var='lat', alt_var='alt',
+                         hr_var='hour', min_var='minute', tec_var='tec',
+                         hmf2_var='hmf2', nmf2_var='nmf2', mod_cadence=15,
+                         max_tdif=20):
 
-    """ Create daily files for Madrigal/NIMO and daily plots if fig_on is True
+    """Create daily files for Madrigal/model and daily plots.
+
     Parameters
     ----------
-    start_day: datetime
+    start_day : datetime
         day of desired files
-    mad_file_dir : str kwarg
+    mad_file_dir : str
         Madrigal file directory
-    nimo_file_dir : str kwarg
+    mod_file_dir : str
         NIMO file directory
-    MLat: int kwarg
-        magnetic latitude cutoff
-        30 mlat is default
-    lon_start : int kwarg
-        longitude of desired region
-        default is -90, which will span -90 to -30 degrees
-        Another Recommended region is 60 to 120 degrees
-    file_save_dir : str kwarg
-        directory to save file to, default cwd
-    fig_on: bool kwarg
-        if true (default), plot will be made, if false, plot will not be made
-    fig_save_dir : str kwarg
-        directory to save figure, default cwd
-    max_nan : double kwarg
-        Maximum acceptable percent nan values in a pass
-    mad_filt : str kwarg
-        Desired Filter for madrigal data (default barrel_average)
-    mad_interpolate : int kwarg
+    mod_name_format : str
+        prefix of NIMO file including date format before .nc extension, e.g.,
+        'NIMO_AQ_%Y%j'
+    model_name : str
+        Model name (default='NIMO')
+    mod_load_func : function
+        Function for loading model data (default=`io.load.load_nimo`)
+    mlat_val: int
+        magnetic latitude cutoff (default=30)
+    lon_start : int
+        longitude of desired region, e.g., -90 will span -90 to -30 degrees
+        (default=-90)
+    file_save_dir : str
+        directory to save file to (default='')
+    fig_on: bool
+        if True, plot will be made, if False, plot will not be made
+        (default=True)
+    fig_save_dir : str
+        directory to save figure (default='')
+    max_nan : int or float
+        Maximum acceptable percent nan values in a pass (default=20)
+    mad_filt : str
+        Desired Filter for madrigal data (default='barrel_average')
+    mad_interpolate : int
         int that determines the number of data points in interpolation
-        new length will be len(density)xinterpolate
-        default is 2 indicating double number of points
-    mad_envelope : bool kwarg
-        if True, barrel roll will include points inside an
-        envelope, if False (default), no envelope will be used
-    mad_barrel : double kwarg
-        latitudinal radius of barrel for madrigal (default: 3 degrees maglat)
-    mad_window : double kwarg
-        latitudinal width of moving window (default: 3 degrees maglat)
-    nimo_filt : str kwarg
-        Desired Filter for nimo data (no filter default)
-    nimo_interpolate : int kwarg
+        new length will be len(density) x interpolate (default=2)
+    mad_envelope : bool
+        if True, barrel roll will include points inside an envelope, if False,
+        no envelope will be used (default=False)
+    mad_barrel : float
+        latitudinal radius of barrel for madrigal (default=3)
+    mad_window : float
+        latitudinal width of moving window (default=3)
+    mod_filt : str
+        Desired Filter for nimo data (default='')
+    mod_interpolate : int
         int that determines the number of data points in interpolation
-        new length will be len(density)xinterpolate
-        default is 2
-    nimo_envelope : bool kwarg
-        if True, barrel roll will include points inside an
-        envelope, if false (default), no envelope will be used
-    nimo_barrel : double kwarg
-        latitudinal radius of barrel for swarm (default: 3 degrees maglat)
-    nimo_window : double kwarg
-        latitudinal width of moving window (default: 3 degrees maglat)
-    fosi : int kwarg
-        fontsize for plot (default is 15)
-        Exceptions:
-            Super Title (fosi + 10)
-    nimo_name_format : str kwarg
-        prefix of NIMO file including date format before .nc
-        Default: 'NIMO_AQ_%Y%j'
-    *_var : str kwarg
-        variable names to be opened in the NIMO file
-        defaults
-        --------
-        electron density - 'dene'
-        geo longitude - 'lon'
-        geo latitude - 'lat'
-        altitude - 'alt'
-        hour - 'hour'
-        minute - 'minute'
-        TEC - 'tec'
-        hmf2 - 'hmf2'
-        nmf2 - 'nmf2'
-    nimo_cadence: int kwarg
-        time cadence of NIMO data in minutes
-        default is 15 minutes
-    max_tdif : double kwarg
-        maximum time distance (in minutes) between a NIMO and Madrigal
-        conjunction allowed (default 20)
-    OUTPUT:
-    df : dataframe
-        columns ['Mad_Time_Start', 'Mad_MLat', 'Mad_GLon_Start',
-                'Mad_GLat_Start', 'LT_Hour', 'Mad_Nan_Percent',
-                'Mad_EIA_Type', 'Mad_Peak_MLat1', 'Mad_Peak_TEC1',
-                'Mad_Peak_MLat2', 'Mad_Peak_TEC2', 'Mad_Peak_MLat3',
-                'Mad_Peak_TEC3', 'Nimo_Time', 'Nimo_GLon', 'Nimo_Min_MLat',
-                'Nimo_Max_MLat', 'Nimo_Type','Nimo_Peak_MLat1',
-                'Nimo_Peak_TEC1', 'Nimo_Peak_MLat2', 'Nimo_Peak_TEC2',
-                'Nimo_Peak_MLat3', 'Nimo_Peak_TEC3', 'Nimo_Third_Peak_MLat1',
-                'Nimo_Third_Peak_TEC1']
-    fig : figure
+        new length will be len(density) x interpolate (default=2)
+    mod_envelope : bool
+        if True, barrel roll will include points inside an envelope, if False,
+        no envelope will be used (default=False)
+    mod_barrel : float
+        latitudinal radius of barrel for swarm (default=3)
+    mod_window : float
+        latitudinal width of moving window (default=3)
+    fosi : int
+        fontsize for plot, with title being `fosi` + 10 (default=15)
+    ne_var : str
+        Electron denstiy variable in the model file (default='dene')
+    lon_var : str
+        Longitude variable in the model file (default='lon')
+    lat_var : str
+        Latitude variable in the model file (default='lat')
+    alt_var : str
+        Altitude variable in the model file (default='alt')
+    hr_var : str
+        Hour of day variable in the model file (default='hour')
+    min_var : str
+        Minute of hour variable in the model file (default='minute')
+    tec_var : str
+        TEC variable in the model file (default='tec')
+    hmf2_var : str
+        hmF2 variable in the model file (default='hmf2')
+    nmf2_var : str
+        NmF2 variable in the model file (default='nmf2')
+    mod_cadence : int
+        Time cadence of Model data in minutes (default=15)
+    max_tdif : float
+        Maximum allowed time in minutes between a model and Swarm conjunction
+        (default=20)
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DataFrame with Madrigal and model data for the desired longitude sector
+    fig : mpl.Figure
         Saved not opened
 
     """
+    # Initialize column names
+    col_mod_name = model_name.capitalize()
     columns = ['Mad_Time_Start', 'Mad_MLat', 'Mad_GLon_Start',
                'Mad_GLat_Start', 'LT_Hour', 'Mad_Nan_Percent',
                'Mad_EIA_Type', 'Mad_Peak_MLat1', 'Mad_Peak_TEC1',
                'Mad_Peak_MLat2', 'Mad_Peak_TEC2', 'Mad_Peak_MLat3',
-               'Mad_Peak_TEC3', 'Nimo_Time', 'Nimo_GLon', 'Nimo_Min_MLat',
-               'Nimo_Max_MLat', 'Nimo_Type', 'Nimo_Peak_MLat1',
-               'Nimo_Peak_TEC1', 'Nimo_Peak_MLat2', 'Nimo_Peak_TEC2',
-               'Nimo_Peak_MLat3', 'Nimo_Peak_TEC3', 'Nimo_Third_Peak_MLat1',
-               'Nimo_Third_Peak_TEC1']
+               'Mad_Peak_TEC3', f'{col_mod_name}_Time', f'{col_mod_name}_GLon',
+               f'{col_mod_name}_Min_MLat', f'{col_mod_name}_Max_MLat',
+               f'{col_mod_name}_Type', f'{col_mod_name}_Peak_MLat1',
+               f'{col_mod_name}_Peak_TEC1', f'{col_mod_name}_Peak_MLat2',
+               f'{col_mod_name}_Peak_TEC2', f'{col_mod_name}_Peak_MLat3',
+               f'{col_mod_name}_Peak_TEC3', f'{col_mod_name}_Third_Peak_MLat1',
+               f'{col_mod_name}_Third_Peak_TEC1']
     df = pd.DataFrame(columns=columns)
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
     mad_dc = io.load_madrigal(sday, mad_file_dir)
-    nimo_dc = io.load.load_nimo(
-        start_day, fdir=nimo_file_dir, name_format=nimo_name_format,
+
+    # Load the model data
+    mod_dc = mod_load_func(
+        start_day, fdir=mod_file_dir, name_format=mod_name_format,
         ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
         hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
-        nmf2_var=nmf2_var, time_cadence=nimo_cadence)  # get nimo data
+        nmf2_var=nmf2_var, time_cadence=mod_cadence)
 
     f = -1
     mlat_val_og = mlat_val
@@ -581,12 +504,13 @@ def NIMO_MAD_DailyFile(
             # get nimo and conjunction
             glon_val = (lon_max + lon_min) / 2
             try:
-                nimo_df, nimo_map = nimo_conjunctions.nimo_mad_conjunction(
-                    nimo_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
+                mod_df, mod_map = conjunctions.mad_conjunction(
+                    mod_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
             except ValueError:
+                logger.info('no Madrigal/model conjunction at this time')
                 continue
 
-            # create madrigal dataframe
+            # Create madrigal dataframe
             mad_df = pd.DataFrame()
             mad_df["tec"] = mad_tec_meas
             mad_df["Mag_Lat"] = mad_mlat[abs(mad_mlat) < mlat_val]
@@ -635,38 +559,40 @@ def NIMO_MAD_DailyFile(
                         panel1 = 1
 
                 # Get nimo eia_type ------------------------------------------
-                nlat = nimo_df['Mag_Lat'].values
-                nden = nimo_df['tec'].values
+                nlat = mod_df['Mag_Lat'].values
+                nden = mod_df['tec'].values
 
-                (nimo_lat, nimo_tecfilt, eia_type_slope, z_lat, plats,
-                 p3) = eia_complete(nlat, nden, 'tec', filt=nimo_filt,
-                                    interpolate=nimo_interpolate,
-                                    barrel_envelope=nimo_envelope,
-                                    barrel_radius=nimo_barrel,
-                                    window_lat=nimo_window)
+                (mod_lat, mod_tecfilt, eia_type_slope, z_lat, plats,
+                 p3) = eia_complete(nlat, nden, 'tec', filt=mod_filt,
+                                    interpolate=mod_interpolate,
+                                    barrel_envelope=mod_envelope,
+                                    barrel_radius=mod_barrel,
+                                    window_lat=mod_window)
 
-                df.at[f, 'Nimo_Time'] = nimo_df["Time"].iloc[0][0].strftime(
-                    '%Y/%m/%d_%H:%M:%S.%f')
+                df.at[f, f'{col_mod_name}_Time'] = mod_df["Time"].iloc[0][
+                    0].strftime('%Y/%m/%d_%H:%M:%S.%f')
 
-                df.at[f, 'Nimo_GLon'] = nimo_df["Longitude"].iloc[0]
-                df.at[f, 'Nimo_Min_MLat'] = min(nimo_df["Mag_Lat"])
-                df.at[f, 'Nimo_Max_MLat'] = max(nimo_df["Mag_Lat"])
-                df.at[f, 'Nimo_Type'] = eia_type_slope
+                df.at[f, f'{col_mod_name}_GLon'] = mod_df["Longitude"].iloc[0]
+                df.at[f, f'{col_mod_name}_Min_MLat'] = min(mod_df["Mag_Lat"])
+                df.at[f, f'{col_mod_name}_Max_MLat'] = max(mod_df["Mag_Lat"])
+                df.at[f, f'{col_mod_name}_Type'] = eia_type_slope
                 if len(plats) > 0:  # plot peak latitudes
                     for pi, p in enumerate(plats):
-                        lat_loc = (abs(p - nimo_df['Mag_Lat']).argmin())
-                        df_strl = 'Nimo_Peak_MLat' + str(pi + 1)
-                        df_strn = 'Nimo_Peak_TEC' + str(pi + 1)
-                        df.at[f, df_strl] = nimo_df['Mag_Lat'].iloc[lat_loc]
-                        df.at[f, df_strn] = nimo_df['tec'].iloc[lat_loc]
+                        lat_loc = (abs(p - mod_df['Mag_Lat']).argmin())
+                        df_strl = f'{col_mod_name}_Peak_MLat' + str(pi + 1)
+                        df_strn = f'{col_mod_name}_Peak_TEC' + str(pi + 1)
+                        df.at[f, df_strl] = mod_df['Mag_Lat'].iloc[lat_loc]
+                        df.at[f, df_strn] = mod_df['tec'].iloc[lat_loc]
 
                 if len(p3) > 0:  # plot third peak for nimo
                     for pi, p in enumerate(p3):
-                        lat_loc = (abs(p - nimo_df['Mag_Lat']).argmin())
-                        df_strl3 = 'Nimo_Third_Peak_MLat' + str(pi + 1)
-                        df_strn3 = 'Nimo_Third_Peak_TEC' + str(pi + 1)
-                        df.at[f, df_strl3] = nimo_df['Mag_Lat'].iloc[lat_loc]
-                        df.at[f, df_strn3] = nimo_df['tec'].iloc[lat_loc]
+                        lat_loc = (abs(p - mod_df['Mag_Lat']).argmin())
+                        df_strl3 = f'{col_mod_name}_Third_Peak_MLat' + str(
+                            pi + 1)
+                        df_strn3 = f'{col_mod_name}_Third_Peak_TEC' + str(
+                            pi + 1)
+                        df.at[f, df_strl3] = mod_df['Mag_Lat'].iloc[lat_loc]
+                        df.at[f, df_strn3] = mod_df['tec'].iloc[lat_loc]
 
                 if fig_on:
                     ax = fig.add_subplot(4, 3, j)
@@ -677,7 +603,7 @@ def NIMO_MAD_DailyFile(
                                     mad_tec_meas - mad_std_meas,
                                     mad_tec_meas + mad_std_meas, color='g',
                                     alpha=0.2)
-                    ax.plot(nimo_df['Mag_Lat'], nimo_df['tec'], linestyle='--',
+                    ax.plot(mod_df['Mag_Lat'], mod_df['tec'], linestyle='--',
                             color='k', label=eia_type_slope)
                 if abs(lon_min) < 180:
                     time_ls = []
@@ -713,13 +639,15 @@ def NIMO_MAD_DailyFile(
                                       ymin=min(mad_df["tec"]),
                                       ymax=mad_df["tec"].iloc[lat_loc],
                                       alpha=0.5, color='black')
-                    if fig_on:  # add local time
+                    if fig_on:
+                        # add local time
                         lt_plot = np.round(lt_hr, 2)
                         ax.set_title(str(lon_min) + ' to ' + str(lon_max)
                                      + ' GeoLon ' + str(lt_plot) + 'LT')
                         ax.set_xlim([-mlat_val, mlat_val])
                         ax.legend()
                 j = j + 1
+
         if fig_on:
             t1 = mad_dc['time'][mt].strftime('%Y/%m/%d %H:%M')
             ts1 = mad_dc['time'][mt].strftime('%H%M')
@@ -743,15 +671,16 @@ def NIMO_MAD_DailyFile(
                        + str(lon_start + 5 * 12) + 'glon.jpg')
             fig.savefig(save_as)
             plt.close()
-            fig_map = madrigal_nimo_world_maps(stime, mad_dc=mad_dc,
-                                               nimo_map=nimo_map)
-            save_as = (save_dir + '/NIMO_MADRIGAL_MAP_' + ds + '_' + ts1
-                       + '_' + ts2 + '.jpg')
+            fig_map = madrigal_model_world_maps(stime, mad_dc=mad_dc,
+                                                mod_map=mod_map)
+            save_as = os.path.join(save_dir, '_'.join([
+                model_name.upper(), 'MADRIGAL', 'MAP', ds, ts1,
+                '{:}.jpg'.format(ts2)]))
             fig_map.savefig(save_as)
             plt.close()
 
     # Save the statistics to a dialy stats file
-    io.write.write_daily_stats(df, mad_dc['time'][mt], 'NIMO', 'MADRIGAL',
-                               file_save_dir, mad_lon=lon_start)
+    io.write.write_daily_stats(df, mad_dc['time'][mt], model_name.upper(),
+                               'MADRIGAL', file_save_dir, mad_lon=lon_start)
 
     return df
