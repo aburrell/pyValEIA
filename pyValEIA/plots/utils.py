@@ -3,6 +3,7 @@
 # DISTRIBUTION STATEMENT A: Approved for public release. Distribution is
 # unlimited.
 # ----------------------------------------------------------------------------
+"""Utility functions for formatting or creating plots."""
 
 import matplotlib.ticker as mticker
 
