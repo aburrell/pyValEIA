@@ -206,3 +206,73 @@ def find_nan_ranges(arr):
     nan_list = list(zip(starts, ends))
 
     return nan_list
+
+
+def find_all_gaps(inds):
+    """Identify gaps in a list of indices.
+
+    Parameters
+    ----------
+    inds : list-like
+        Array of indices
+
+    Returns
+    -------
+    gap_indices : list-like
+        Indices of gap start and end
+
+    Notes
+    -----
+    For example, in an array of `arr=[2,3,5,6,7,8]`, this function will return
+    `gap_inds=[1]` to indicate where the gap starts.
+
+    """
+    gap_indices = []
+
+    # Iterate through the array and find where the gaps start
+    for i in range(len(inds) - 1):
+        if inds[i + 1] != inds[i] + 1:
+            gap_indices.append(i + 1)  # Append the index where the gap starts
+
+    return gap_indices
+
+
+def detect_outliers(arr):
+    """Detect outliers in an array.
+
+    Parameters
+    ----------
+    arr : array-like
+        Array of numbers
+
+    Returns
+    -------
+    outlier_indices : array-like
+        array of indices where `arr` has outliers
+
+    Notes
+    -----
+    Uses InterQuartile Range (IQR)
+    IQR = q3 - q1
+    outlier > q3 + 1.5 * IQR
+    outlier < q1 - 1.5 * IQR
+
+    """
+    # Ensure input is array-like
+    arr = np.asarray(arr)
+    if arr.shape == ():
+        arr = np.array([arr])
+
+    # Get the quartiles and IQR
+    q1 = np.percentile(arr[np.isfinite(arr)], 25)
+    q3 = np.percentile(arr[np.isfinite(arr)], 75)
+    iqr = q3 - q1
+
+    # Get the upper and lower limits
+    upper_lim = q3 + 1.5 * iqr
+    lower_lim = q1 - 1.5 * iqr
+
+    # Identify the desired indices
+    outlier_indices = np.where((arr > upper_lim) | (arr < lower_lim))[0]
+
+    return outlier_indices
