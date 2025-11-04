@@ -72,7 +72,7 @@ def unique_threshold(xvals, thresh=0.01):
     """
     # Number of decimal places
     ndec = int(abs(np.log10(thresh)))
-    
+
     # Threshold here is our base in rounding
     uvals = np.unique(np.round(xvals, ndec))
 
