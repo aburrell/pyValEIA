@@ -16,8 +16,10 @@ import cdflib
 from netCDF4 import Dataset
 
 from pyValEIA import logger
+from pyValEIA.eia.types import clean_type
 from pyValEIA.io.download import download_and_unzip_swarm
 from pyValEIA.io.write import build_daily_stats_filename
+from pyValEIA.stats import skill_score
 from pyValEIA.utils import coords
 
 
@@ -444,3 +446,134 @@ def load_daily_stats(stime, model, obs, file_dir, **kwargs):
     stat_data = pd.DataFrame(dat, columns=dat.dtype.names)
 
     return stat_data
+
+
+def multiday_states_report(date_range, daily_dir, model_name, obs_name,
+                           obs_constraint, comp_type='eia'):
+    """Create a state report for a range of dates with a skill check.
+
+    Parameters
+    ----------
+    date_range : pd.DateRange
+        Date range of desired states files
+    daily_dir : str
+        Directory containing the daily files
+    model_name : str
+        Case-sensitive model name to load, expects the capitalization used in
+        the daily stats file header. (e.g., 'Nimo', 'PyIRI')
+    obs_name : str
+        Observation name to load (e.g., 'SWARM', 'MADRIGAL')
+    obs_constraint : str or int
+        Additional constraint for observation type. For Madrigal, this is the
+        longitude as a integer. For Swarm, this is the altitude string, which
+        currently accepts 'swarm', 'hmf2', or '100'.
+    comp_type : str
+        Desired type to check against for orientation or EIA state, expecting
+        one of 'eia', 'peak', 'flat', or 'trough' for EIA state comparison or
+        one of 'north', 'south', or 'neither' for an orientation comparison
+        (default='eia')
+
+    Returns
+    -------
+    model_frame : pd.DataFrame
+        Model longitude, local time, states, directions, and EIA types.  If
+        Swarm observations are requested, will also contain a satellite list.
+    obs_frame : pd.DataFrame
+        Data longitude, local time, states, directions, and EIA types.  If
+        Swarm observations are requested, will also contain a satellite list.
+
+    Raises
+    ------
+    ValueError
+        For incompatible input combinations
+
+    See Also
+    --------
+    load_daily_stats
+        For accepted models, observations, and Madrigal longitudes
+
+    """
+    # Check to see what we are comparing (states or directions)
+    if comp_type.lower() in ['north', 'south', 'neither']:
+        orientation = 'direction'
+    else:
+        orientation = 'state'
+
+    # Initialize the parameter dicts
+    mod_dict = {'state': list(), 'direction': list(), 'type': list(),
+                'Glon': list(), 'LT': list()}
+    obs_dict = {'state': list(), 'direction': list(), 'type': list(),
+                'Glon': list(), 'LT': list()}
+
+    # Determine the observation-specific inputs
+    if obs_name.lower() == 'swarm':
+        load_kwargs = {}
+        obs_str = 'Swarm_EIA_Type'
+        mod_dict['Sat'] = list()
+        obs_dict['Sat'] = list()
+
+        if model_name.lower() == 'pyiri':
+            model_str = 'PyIRI_Type'
+        else:
+            if obs_constraint == 'swarm':
+                model_str = '{:s}_Swarm_Type'.format(model_name)
+            elif obs_constraint == 'hmf2':
+                model_str = '{:s}_hmf2_Type'.format(model_name)
+            elif obs_constraint == '100':
+                model_str = '{:s}_Swarm100_Type'.format(model_name)
+            else:
+                raise ValueError(''.join([
+                    'Unknown altitude type provided in `obs_constraint`: ',
+                    repr(obs_constraint)]))
+    elif obs_name.lower() == 'madrigal':
+        obs_str = 'Mad_EIA_Type'
+        load_kwargs = {'mad_lon': obs_constraint}
+
+        if model_name.lower() == 'pyiri':
+            raise ValueError('Have not yet implemented TEC retrieval in PyIRI')
+        else:
+            model_str = '{:s}_Type'.format(model_name)
+    else:
+        raise ValueError('Unknown observation source')
+
+    # Cycle through each day
+    for sday in date_range.to_pydatetime():
+        # Load the desired file
+        daily_stats = load_daily_stats(sday, model_name.upper(),
+                                       obs_name.upper(), daily_dir,
+                                       **load_kwargs)
+
+        # Clean and save the model data
+        clean_out = clean_type(daily_stats[model_str].values)
+        mod_dict['state'].extend(clean_out[0])
+        mod_dict['direction'].extend(clean_out[1])
+        mod_dict['type'].extend(daily_stats[model_str].values)
+
+        # Clean and save the observed data
+        clean_out = clean_type(daily_stats[obs_str].values)
+        obs_dict['state'].extend(clean_out[0])
+        obs_dict['directon'].extend(clean_out[1])
+        obs_dict['type'].extend(daily_stats[obs_str].values)
+
+        # Save the location information
+        mod_dict['Glon'].extend(
+            daily_stats['{:s}_Glon'.format(model_name)].values)
+        obs_dict['Glon'].extend(
+            daily_stats['{:s}_Glon'.format(model_name)].values)
+        mod_dict['Glon'].extend(daily_stats['LT_Hour'].values)
+        obs_dict['Glon'].extend(daily_stats['LT_Hour'].values)
+
+        if 'Sat' in mod_dict.keys():
+            mod_dict['Sat'].extend(daily_stats['Satellite'].values)
+            obs_dict['Sat'].extend(daily_stats['Satellite'].values)
+
+    # Cast the dictionaries as pandas DataFrames
+    model_frame = pd.DataFrame(mod_dict)
+    obs_frame = pd.DataFrame(obs_dict)
+
+    # Get the skill score of the model against the observations
+    model_frame['skill'] = skill_score.state_check(
+        obs_frame[orientation].values, model_frame[orientation].values,
+        state=comp_type)
+
+    return model_frame, obs_frame

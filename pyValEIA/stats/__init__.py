@@ -6,3 +6,4 @@
 
 # Import the package modules and top-level classes
 from pyValEIA.stats import skill_score  # noqa F401
+from pyValEIA.stats import tables  # noqa F401

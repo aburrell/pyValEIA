@@ -181,7 +181,7 @@ def liemohn_skill_score(event_states, coin=False):
 
 
 def calc_pc_and_csi(event_states, coin=False):
-    """Calculate the percent correct and critical success index
+    """Calculate the percent correct and critical success index.
 
     Parameters
     ----------

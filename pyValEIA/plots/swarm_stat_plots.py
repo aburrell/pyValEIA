@@ -9,158 +9,26 @@
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import warnings
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-from pyValEIA.io import load
 from pyValEIA.stats import skill_score
-from pyValEIA.eia.types import clean_type
-
-
-def states_report_swarm(date_range, daily_dir, typ='eia',
-                        NIMO_alt='swarm'):
-    """ Report States for date range for Swarm comparison,
-    need to make one for Madrigal comparison
-    Parameters
-    ----------
-    date_range : pandas daterange
-        Date range of desired states files
-    daily_dir : str
-        directory of daily files
-    typ: str
-        desired type to check against
-        for orientation of 'state'
-        'eia'(default), 'peak', 'flat', 'trough'
-        for orientation of 'direction'
-        'north', 'south', 'neither'
-    NIMO_alt: str
-        specifies which altitude to use
-        'swarm'(default),'hmf2','100'
-    Returns
-    -------
-    NiSw : DataFrame
-        NIMO states, directions, and types
-        also includes longitude, local times, and sat list
-    Sw : DataFrame
-        Swarm States, direction, and types
-        also includes longitude, local times, and sat list
-    Py : DataFrame
-        PyIRI states, directions, and types
-        also includes longitude, local times, and sat list
-    """
-    # Check to see what we are comparing (states or directions)
-    if (typ == 'north') | (typ == 'south') | (typ == 'neither'):
-        orientation = 'direction'
-    else:
-        orientation = 'state'
-    # Set date array for given time range
-    date_array = date_range.to_pydatetime()
-
-    # Establish strings
-    if NIMO_alt == 'swarm':
-        NIMO_str = 'Nimo_Swarm_Type'
-    elif NIMO_alt == 'hmf2':
-        NIMO_str = 'Nimo_hmf2_Type'
-    elif NIMO_alt == '100':
-        NIMO_str = 'Nimo_Swarm100_Type'
-
-    # initialize params for states, directions, and full types
-    nim_sts = []  # NIMO
-    nim_dirs = []
-    nim_typ = []
-
-    sw_sts = []  # Swarm
-    sw_dirs = []
-    sw_typ = []
-
-    py_sts = []  # PyIRI
-    py_dirs = []
-    py_typ = []
-
-    lts = []
-    lons = []
-    sats = []
-
-    for sday in date_array:
-        # load files
-        nimdf = load.load_daily_stats(sday, 'NIMO', 'SWARM', daily_dir)
-        pydf = load.load_daily_stats(sday, 'PyIRI', 'SWARM', daily_dir)
-
-        # NIMO
-        s, d = clean_type(nimdf[NIMO_str].values)
-        nim_sts.extend(s)
-        nim_dirs.extend(d)
-        nim_typ.extend(nimdf[NIMO_str].values)
-
-        # Swarm
-        s, d = clean_type(nimdf['Swarm_EIA_Type'].values)
-        sw_sts.extend(s)
-        sw_dirs.extend(d)
-        sw_typ.extend(nimdf['Swarm_EIA_Type'].values)
-
-        # basic params
-        lts.extend(nimdf['LT_Hour'].values)
-        lons.extend(nimdf['Nimo_GLon'].values)
-        sats.extend(nimdf['Satellite'].values)
-
-        # PyIRI
-        s, d = clean_type(pydf['PyIRI_Type'].values)
-        py_sts.extend(s)
-        py_dirs.extend(d)
-        py_typ.extend(pydf['PyIRI_Type'].values)
-
-    # Initialize DataFrames
-    NiSw = pd.DataFrame()
-    Sw = pd.DataFrame()
-    PyI = pd.DataFrame()
-
-    # NIMO
-    NiSw['state'] = np.array(nim_sts)
-    NiSw['direction'] = np.array(nim_dirs)
-    NiSw['type'] = np.array(nim_typ)
-    NiSw['GLon'] = np.array(lons)
-    NiSw['LT'] = np.array(lts)
-    NiSw['Sat'] = np.array(sats)
-
-    # Swarm
-    Sw['state'] = np.array(sw_sts)
-    Sw['direction'] = np.array(sw_dirs)
-    Sw['type'] = np.array(sw_typ)
-    Sw['GLon'] = np.array(lons)
-    Sw['LT'] = np.array(lts)
-    Sw['Sat'] = np.array(sats)
-
-    # PyIRI
-    PyI['state'] = np.array(py_sts)
-    PyI['direction'] = np.array(py_dirs)
-    PyI['type'] = np.array(py_typ)
-    PyI['GLon'] = np.array(lons)
-    PyI['LT'] = np.array(lts)
-    PyI['Sat'] = np.array(sats)
-
-    # Compare PyIRI to Swarm and NIMO to Swarm
-    NiSw['skill'] = skill_score.state_check(Sw[orientation].values,
-                                            NiSw[orientation].values, state=typ)
-    PyI['skill'] = skill_score.state_check(Sw[orientation].values,
-                                           PyI[orientation].values, state=typ)
-
-    return NiSw, Sw, PyI
+from pyValEIA.stats import tables
 
 
 def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                    model2_name='Model2', PorC='PC',
                    DayNight=True, LT_range=[7, 19], coin=True):
-    """ Plot LSS vs CSI or PC 4 panels (one for each LSS)
-    NOTE: LSS can range outside of +/-1
+    """Plot LSS vs CSI or PC 4 panels (one for each LSS).
+
     Parameters
     ----------
-    model1 : dataframe
-        first model dataframe built by states_report_swarm
-    model2 : dataframe
-        second model dataframe built by states_report_swarm
+    model1 : DataFrame
+        first model DataFrame built by multiday_states_report
+    model2 : DataFrame
+        second model DataFrame built by multiday_states_report
     eia_type : str
         desired eia type for fig title
     date_range : datetime range
@@ -180,10 +48,20 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     coin : bool kwarg
         If True, coin LSS will be plotted for comparison (default)
         if false, coin LSS will not be plotted
+
     Returns
     -------
     fig : fig handle
         4 panel figure (one for each LSS)
+
+    See Also
+    --------
+    io.load.multiday_states_report
+
+    Notes
+    -----
+    LSS can range outside of +/-1
+
     """
 
     # Set date array for given time range
@@ -325,13 +203,12 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
 def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
                              PorC='PC', DayNight=True, LT_range=[7, 19],
                              coin=True):
-    """ Plot LSS vs CSI or PC 4 panels (one for each LSS) for 1 model alone
-    NOTE: LSS is only useful in comparison to another model, therefore,
-    coin set to True is highly recommended!
+    """Plot LSS vs CSI or PC 4 panels (one for each LSS) for 1 model alone.
+
     Parameters
     ----------
-    model1 : dataframe
-        model dataframe built by states_report_swarm
+    model1 : DataFrame
+        model DataFrame built by multiday_states_report
     eia_type : str
         desired eia type for fig title
     date_range : datetime range
@@ -349,10 +226,21 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
     coin : bool kwarg
         If True, coin LSS will be plotted for comparison (default)
         if false, coin LSS will not be plotted
+
     Returns
     -------
     fig : fig handle
         4 panel figure (one for each LSS)
+
+    See Also
+    --------
+    io.load.multiday_states_report
+
+    Notes
+    -----
+    LSS is only useful in comparison to another model, therefore,
+    coin set to True is highly recommended!
+
     """
     # Print Warning if coin is set to False
     if not coin:
@@ -479,13 +367,14 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
 
 
 def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
-    """ plot histogram maps on a panel
+    """Plot histogram maps on a panel.
+
     Parameters
     ----------
     ax : plt axis
         matplotlib.plt axis
-    model : dataframe
-        dataframe of model data including skill and local times
+    model : DataFrame
+        DataFrame of model data including skill and local times
         built by states_report_swarm
     bin_lons : int kwarg
         number of bins between -180 and 180 deg geo lon
@@ -496,12 +385,14 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
     LT_range : list kwarg
         Range of day night local time, Default is 7 LT to 19 LT for day and
         19 LT to 7 LT for Night
+
     Returns
     -------
     ax : plt axis
         original axis with data plotted
     hist_ax : plt axis
         twinx axis to ax with histogram plotted
+
     """
     # Initialize histogram bins
     hist_bins = np.linspace(-180, 180, bin_lons)
@@ -556,66 +447,16 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
     return ax, hist_ax
 
 
-def decision_table_sat(states, eia_type='eia',
-                       sats=['A', 'B', 'C'], model_name='Model'):
-    """ Neat decision table summing up the hits, misses,
-    correct negatives, and false positives
-
-    Parameters
-    ----------
-    states: dataframe
-        dataframe of model data including skill and local times
-        built by states_report_swarm
-    eia_type : str
-        eia state e.g. EIA, Peak, etc. depending on what is considered a hit
-    sats : list of strings kwarg
-        swarm satellites 'A', 'B', and 'C' as default
-        can specify just 1 or 2
-    model_name : str kwarg
-        Model name for decision table label
-        default 'Model'
-    Returns
-    -------
-    df : dataframe
-        dataframe in table format separated by satellite
-        and event state (state, non-state)
-        index using
-        df.loc[(f'Swarm {satellite}', eia_type), (model_name, eia_type)]
-    """
-    for i, s in enumerate(sats):
-
-        # Sum total HMFCs
-
-        hit = sum(states['skill'][states['Sat'] == s] == 'H')
-        falarm = sum(states['skill'][states['Sat'] == s] == 'F')
-        miss = sum(states['skill'][states['Sat'] == s] == 'M')
-        corneg = sum(states['skill'][states['Sat'] == s] == 'C')
-        if i == 0:
-            df = pd.DataFrame(
-                [[hit, miss], [falarm, corneg]],
-                index=pd.MultiIndex.from_product(
-                    [['Swarm ' + s], [eia_type, 'Non-' + eia_type]]),
-                columns=pd.MultiIndex.from_product(
-                    [[model_name], [eia_type, 'Non-' + eia_type]]))
-        else:
-            df.loc[('Swarm ' + s, eia_type), :] = np.array([hit, miss])
-            df.loc[('Swarm ' + s, 'Non-' + eia_type), :] = np.array([
-                falarm, corneg])
-
-    df.style
-    return df
-
-
 def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
                         model_name='Model', fosi=16, hist_ylim=[0, 15],
                         LT_range=[7, 19]):
-    """ plot histogram maps on a 4 panel figure for each score: Hit, Miss,
-    False positive, and Correct Negative
+    """Plot histograms for each Hit, Miss, False Pos, and Cor Neg.
+
     Parameters
     ----------
-    model_states : dataframe
-        dataframe of model data including skill and local times
-        built by states_report_swarm
+    model_states : pd.DataFrame
+        DataFrame of model data including skill and local times built by
+        multiday_states_report
     sat : str
         swarm satellite 'A', 'B', or 'C'
     eia_type : str
@@ -638,12 +479,17 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
     LT_range : list kwarg
         Range of day night local time, Default is 7 LT to 19 LT for day and
         19 LT to 7 LT for Night
+
     Returns
     -------
     fig : figure handle
         fig with 4 panels of hist maps
-    """
 
+    See Also
+    --------
+    io.load.multiday_states_report
+
+    """
     # Creating Figure with GridSpec
     scores = ["H", "M", "F", "C"]
 
@@ -727,70 +573,37 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
     return fig
 
 
-def style_df_table(df_table, eia_type):
-    """ Style decision table using
-    Need all satellites to use this!
+def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type, colors=None):
+    """Plot percentages of H/(H+M), M/(H+M), F/(F+C), C/(C+F) as 4 quadrants.
+
     Parameters
     ----------
-    df_table : dataframe
-        dataframe created by decision_table_sat
-    eia_type : str
-        string designating which eia type is being reported
-    Returns
-    -------
-    s : styled dataframe
-    """
-    s = df_table.style.format('{:.0f}')
-
-    # Adding Color
-    s.set_table_styles([
-        {'selector': '.true', 'props': 'background-color: #e6ffe6;'},
-        {'selector': '.false', 'props': 'background-color: #ffe6e6;'},],
-        overwrite=False)
-    cell_color = pd.DataFrame([['true ', 'false '],
-                               ['false ', 'true '],
-                               ['true ', 'false '],
-                               ['false ', 'true '],
-                               ['true ', 'false '],
-                               ['false ', 'true ']],
-                              index=df_table.index,
-                              columns=df_table.columns[:len(df_table)])
-    for l0 in ['Swarm A', 'Swarm B', 'Swarm C']:
-        s.set_table_styles(
-            {(l0, 'Non-' + eia_type):
-             [{'selector': '', 'props':
-               'border-bottom: 2px solid black;'}],
-             (l0, eia_type):
-             [{'selector': '.level0', 'props':
-               'border-bottom: 2px solid black'}]},
-            overwrite=False, axis=1)
-
-    s.set_td_classes(cell_color)
-
-    return s
-
-
-def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type,
-                       colors=['blue', 'red', 'purple']):
-    """ Plot the percentages of H/(H+M), M/(H+M), F/(F+C), C/(C+F) as
-    4 quadrants
-    Prameters
-    model_states: dataframe
-        dataframe of model data including skill and local times
-        built by states_report_swarm
-    df_table : dataframe
-        decision table build by decision_table_sat
+    model_states : pd.DataFrame
+        DataFrame of model data including skill and local times built by
+        multiday_states_report
+    df_table : pd.DataFrame
+        Decision table build by decision_table_sat
     fig : figure
-        figure for plotting on
+        Figure for plotting on
     eia_type : str
-        string designating which eia type is being reported
-    colors : list of strings
-        colors to be plotted for each satellite
+        String designating which EIA type is being reported
+    colors : list of strings or NoneType
+        colors to be plotted for each satellite (default=None)
+
     Returns
     ------
     fig : figure
         the resulting figure
+
+    See Also
+    --------
+    io.load.multiday_states_report
+    stats.tables.decision_table_sat
+
     """
+    if colors is None:
+        colors = ['blue', 'red', 'purple']
+
     model_name = df_table.columns[0][0]
     sats = np.unique(model_states['Sat'])
 
@@ -830,32 +643,31 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type,
 def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
                         model2_name='Model2', col1='orange', col2='purple',
                         fosi=16):
-    """ Plot full figure using HMFC_percent_panel
+    """Plot full figure using HMFC_percent_panel.
+
     Parameters
     ----------
-    model1 : dataframe
-        first model dataframe built by states_report_swarm
-    model2 : dataframe
-        second model dataframe built by states_report_swarm
+    model1 : pd.DataFrame
+        First model DataFrame built by states_report_swarm
+    model2 : pd.DataFrame
+        Second model DataFrame built by states_report_swarm
     eia_type : str
-        desired eia type for fig title
-    model1_name : str kwarg
-        first model name for labelling purposes
-        default Model1
-    model2_name : str kwarg
-        second model name for labelling purposes
-        default Model2
+        Desired eia type for fig title
+    model1_name : str
+        First model name for labelling purposes (default='Model1')
+    model2_name : str
+        Second model name for labelling purposes (default='Model2')
     col1 : str
-        plotting color for Model1
-        defualt orange
+        Plotting color for Model1 (default='orange')
     col2 : str
-        plotting color for Model 2
-        default purple
+        plotting color for Model 2 (default='purple')
     fosi : int
         font size for plot
+
     Returns
     -------
     fig : figure
+        Figure handle
 
     Notes
     -----
@@ -870,17 +682,18 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     For quick viewing, there are 4 shaded regions. These represent when a
     model is doing better than a coin toss. Ideally, False positives and Misses
     would have a low % and Hits and Correct Negatives have a higher percentage
+
     """
     fig, ax = plt.subplots(figsize=(10, 10))
     plt.rcParams.update({'font.size': fosi})
 
     # Model1
-    df_table1 = decision_table_sat(model1, model_name=model1_name)
+    df_table1 = tables.decision_table_sat(model1, model_name=model1_name)
     HMFC_percent_panel(model1, df_table1, fig, ax, eia_type,
                        colors=[col1, col1, col1])
 
     # Model2
-    df_table2 = decision_table_sat(model2, model_name=model2_name)
+    df_table2 = tables.decision_table_sat(model2, model_name=model2_name)
     HMFC_percent_panel(model2, df_table2, fig, ax, eia_type,
                        colors=[col2, col2, col2])
 
@@ -941,82 +754,3 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     plt.axhspan(-1, -0.5, xmin=0, xmax=0.25, color='green', alpha=0.2, lw=0)
 
     return fig
-
-
-def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
-                  sats=['A', 'B', 'C']):
-    """ Neat table including the Liemohn Skill Scores 1-4
-
-    Parameters
-    ----------
-    model1: dataframe
-        dataframe of 1st model data including skill and local times
-        built by states_report_swarm
-    model2 : dataframe
-        dataframe of 2nd model data including skill and local times
-        built by states_report_swarm
-    model1_name : str kwarg
-        string of name of model1
-    model2_name : str kwarg
-        string of name for model2
-    sats : list of strings kwarg
-        swarm satellites 'A', 'B', and 'C' as default
-        can specify just 1 or 2
-    Returns
-    -------
-    lss_df : dataframe
-        dataframe in table format separated by satellite
-        and Liemohn skill score
-    """
-    for i, s in enumerate(sats):
-        lss1_m1, lss2_m1, lss3_m1, lss4_m1 = skill_score.Liemohn_Skill_Scores(
-            model1['skill'][model1['Sat'] == s])
-        lss1_m2, lss2_m2, lss3_m2, lss4_m2 = skill_score.Liemohn_Skill_Scores(
-            model2['skill'][model2['Sat'] == s])
-        if i == 0:
-            lss_df = pd.DataFrame(
-                [[lss1_m1, lss1_m2], [lss2_m1, lss2_m2],
-                 [lss3_m1, lss3_m2], [lss4_m1, lss4_m2]],
-                index=pd.MultiIndex.from_product(
-                    [['Swarm ' + s], ['lss1', 'lss2', 'lss3', 'lss4']]),
-                columns=[model1_name, model2_name])
-        else:
-            lss_df.loc[('Swarm ' + s,
-                        'LSS1'), :] = np.array([lss1_m1, lss1_m2])
-            lss_df.loc[('Swarm ' + s,
-                        'LSS2'), :] = np.array([lss2_m1, lss2_m2])
-            lss_df.loc[('Swarm ' + s,
-                        'LSS3'), :] = np.array([lss3_m1, lss3_m2])
-            lss_df.loc[('Swarm ' + s,
-                        'LSS4'), :] = np.array([lss4_m1, lss4_m2])
-
-    lss_df.style
-    return lss_df
-
-
-def style_lss_table(lss_df, sat_list=['A', 'B', 'C']):
-    """ Style decision table using
-
-    Parameters
-    ----------
-    lss_df : dataframe
-        dataframe created by lss_table_sat
-    sat_list: list of strings kwarg
-        satellite list for lss_df
-    Returns
-    -------
-    LSS table with dividers
-    """
-    s = lss_df.style.format()
-
-    for sat in sat_list:
-        l0 = 'Swarm ' + sat
-        s.set_table_styles(
-            {(l0, 'LSS4'):
-             [{'selector': '', 'props':
-               'border-bottom: 2px solid black;'}],
-             (l0, 'LSS1'):
-             [{'selector': '.level0', 'props':
-               'border-bottom: 2px solid black'}]},
-            overwrite=False, axis=1)
-    return s

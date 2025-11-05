@@ -69,6 +69,11 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         Additional peak latitudes, if additional peak(s) are between the EIA
         double peaks and the type is not ghost; these are likely artifacts
 
+    Raises
+    ------
+    ValueError
+        If inputs do not allow for EIA detection.
+
     """
     # Test the input
     if den_type.lower() not in ['ne', 'tec']:
@@ -80,6 +85,9 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
 
     # Calculate the latitude range
     lat_span = int(max(lat) - min(lat))
+
+    if lat_span <= 3:
+        raise ValueError('Insufficient data to calculate EIA')
 
     # sort from south hemisphere to north hemisphere
     sort_in = np.argsort(lat)
@@ -210,7 +218,7 @@ def process_zlats(z_lat, lat, den, lat_base=3):
                    & (z_lat >= -2.5))] = z_eqs[den[ilocz].argmax()]
 
         # make sure z_lat is a unique array
-        z_lat = np.unique(z_lat)
+        z_lat = math.unique_threshold(z_lat, 0.01)
 
     #  Apply quality control to the sign changes by removing adjacent indices
     iadjacent = np.where((z_lat[1:] - z_lat[:-1]) <= 0.5)[0]
@@ -238,7 +246,7 @@ def process_zlats(z_lat, lat, den, lat_base=3):
     z_lat = np.array(z_lat)
 
     # make sure z_lat is a unique array once more
-    z_lat = np.unique(z_lat)
+    z_lat = math.unique_threshold(z_lat, 0.01)
 
     return z_lat
 
@@ -715,7 +723,7 @@ def toomanymax(z_lat, lat, tec, max_lat=None):
     z_lat_new.append(z_lat[-1])
 
     # Make sure array is unique
-    z_lat_new = np.unique(z_lat_new)
+    z_lat_new = math.unique_threshold(z_lat_new, 0.01)
 
     return np.array(z_lat_new)
 

@@ -32,13 +32,14 @@ def set_swarm_alt(sat_id):
     return sat_alt
 
 
-def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
-    """Find conjunctions between NIMO and Swarm.
+def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
+                      offset=0):
+    """Find conjunctions between a model and Swarm.
 
     Parameters
     ----------
-    nimo_dc : dict
-        Dictionary of NIMO data
+    mod_dc : dict
+        Dictionary of model data
     swarm_check : pd.DataFrame
         DataFrame of Swarm data
     alt_str: str kwarg
@@ -48,12 +49,14 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     max_tdif : double nkwarg
         Maximum time distance (in minutes) between a NIMO and Swarm
         conjunction allowed (default=15)
+    offset : int
+        Number of days beyond the loaded Swarm period to check (default=0)
 
     Returns
     -------
-    nimo_df : pd.DataFrame
+    mod_df : pd.DataFrame
         NIMO data at Swarm location/time
-    nimo_map : dict
+    mod_map : dict
         Dictionary of 2D arrays of NmF2, geo lon, and geo lat prepared for
         map plots
 
@@ -64,8 +67,8 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
 
     """
     # Define the start and end times for Swarm during the conjunction
-    sw_time1 = swarm_check["Time"].iloc[0]
-    sw_time2 = swarm_check["Time"].iloc[-1]
+    sw_time1 = swarm_check["Time"].iloc[0] + dt.timedelta(days=offset)
+    sw_time2 = swarm_check["Time"].iloc[-1] + dt.timedelta(days=offset)
 
     # Conjunction Longitude Range for Swarm
     sw_lon1 = min(swarm_check["Longitude"])
@@ -73,39 +76,35 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     sw_lon_check = ((sw_lon1 + sw_lon2) / 2)
 
     # Check longitudes and times for NIMO
-    nimo_lon_ch = nimo_dc['glon'][(abs(nimo_dc['glon']
-                                       - sw_lon_check)
-                                   == min(abs(nimo_dc['glon']
-                                              - sw_lon_check)))]
-    nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1)
-                                 & (nimo_dc['time'] <= sw_time2))]
+    mod_lon_ch = mod_dc['glon'][(abs(mod_dc['glon'] - sw_lon_check)
+                                 == min(abs(mod_dc['glon'] - sw_lon_check)))]
+    mod_time = mod_dc['time'][((mod_dc['time'] >= sw_time1)
+                               & (mod_dc['time'] <= sw_time2))]
 
     # If no time is between sw_time1 and sw_time2 look outside of range
-    if len(nimo_time) == 0:
-        nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1
-                                      - dt.timedelta(minutes=5))
-                                     & (nimo_dc['time'] <= sw_time2))]
-        if len(nimo_time) == 0:
-            nimo_time = nimo_dc['time'][((nimo_dc['time'] >= sw_time1)
-                                         & (nimo_dc['time']
-                                            <= sw_time2
-                                            + dt.timedelta(minutes=5)))]
-    elif len(nimo_time) > 1:
-        nimo_time = [nimo_time[0]]
+    if len(mod_time) == 0:
+        mod_time = mod_dc['time'][((mod_dc['time'] >= sw_time1
+                                    - dt.timedelta(minutes=5))
+                                   & (mod_dc['time'] <= sw_time2))]
+        if len(mod_time) == 0:
+            mod_time = mod_dc['time'][((mod_dc['time'] >= sw_time1)
+                                       & (mod_dc['time'] <= sw_time2
+                                          + dt.timedelta(minutes=5)))]
+    elif len(mod_time) > 1:
+        mod_time = [mod_time[0]]
 
-    if len(nimo_time) == 0:
-        nimo_time = min(nimo_dc['time'], key=lambda t: abs(sw_time1 - t))
-        if nimo_time - sw_time1 < dt.timedelta(minutes=max_tdif):
-            nimo_time = [nimo_time]
+    if len(mod_time) == 0:
+        mod_time = min(mod_dc['time'], key=lambda t: abs(sw_time1 - t))
+        if mod_time - sw_time1 < dt.timedelta(minutes=max_tdif):
+            mod_time = [mod_time]
         else:
-            print(nimo_dc['time'][0])
-            raise RuntimeError(
-                f"NIMO {nimo_time} - Swarm{sw_time1} > {max_tdif} min")
+            raise ValueError(
+                f"Model {mod_time} - Swarm{sw_time1} > {max_tdif} min")
 
     # Find the time and place where NIMO coincides with SWARM. Start with the
     # time and lontitude indices
-    n_t = np.where(nimo_time == nimo_dc['time'])[0][0]
-    n_l = np.where(nimo_lon_ch == nimo_dc['glon'])[0][0]
+    n_t = np.where(mod_time == mod_dc['time'])[0][0]
+    n_l = np.where(mod_lon_ch == mod_dc['glon'])[0][0]
 
     # Get the altitude from alt_str and inc
     if (alt_str == 'A') or (alt_str == 'C'):
@@ -113,22 +112,22 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
     elif alt_str == 'B':
         alt = 511
     elif alt_str == 'hmf2':  # hmf2(time, lat, lon)
-        alt = np.mean(nimo_dc['hmf2'][n_t, :, n_l])
+        alt = np.mean(mod_dc['hmf2'][n_t, :, n_l])
 
     # Incriment by user specified altitude in km
     alt += inc
 
     # Altitude index
-    n_a = np.where(min(abs(nimo_dc['alt'] - alt))
-                   == abs(nimo_dc['alt'] - alt))[0][0]
+    n_a = np.where(min(abs(mod_dc['alt'] - alt))
+                   == abs(mod_dc['alt'] - alt))[0][0]
 
     # Extract the NIMO density and longitudes for the desired slice
-    nimo_ne_lat_all = nimo_dc['dene'][n_t, n_a, :, n_l]
-    nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
+    mod_ne_lat_all = mod_dc['dene'][n_t, n_a, :, n_l]
+    mod_lon_ls = np.ones(len(mod_dc['glat'])) * mod_lon_ch[0]
 
     # Compute NIMO in magnetic coordinates
-    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
-                                                nimo_lon_ls, nimo_time[0])
+    mlat, mlon = coords.compute_magnetic_coords(mod_dc['glat'],
+                                                mod_lon_ls, mod_time[0])
 
     # Max and min of Swarm magnetic lats
     sw_mlat1 = min(swarm_check['Mag_Lat'])
@@ -136,41 +135,36 @@ def nimo_conjunction(nimo_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15):
 
     # Select the same range of magnetic latitudes from NIMO as are available
     # in the Swarm data
-    nimo_ne_return = nimo_ne_lat_all[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+    mod_ne_return = mod_ne_lat_all[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
 
     # Set a list of times for output; all are the conjugate time
-    time_ls = []
-    for i in range(len(nimo_ne_return)):
-        time_ls.append(nimo_time)
+    time_ls = [mod_time for i in range(len(mod_ne_return))]
 
-    # Create Dataframe of NIMO data
-    nimo_df = pd.DataFrame()
-    nimo_df['Time'] = time_ls
-    nimo_df['Ne'] = nimo_ne_return
-    nimo_df['Mag_Lat'] = mlat[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
-    nimo_df['Mag_Lon'] = mlon[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
-    nimo_df['alt'] = np.ones(len(nimo_ne_return)) * nimo_dc['alt'][n_a]
-    nimo_df['Longitude'] = np.ones(len(nimo_ne_return)) * nimo_lon_ch[0]
-    nimo_df['Latitude'] = nimo_dc['glat'][((mlat >= sw_mlat1)
-                                           & (mlat <= sw_mlat2))]
+    # Create Dataframe of the model data
+    mod_df = pd.DataFrame()
+    mod_df['Time'] = time_ls
+    mod_df['Ne'] = mod_ne_return
+    mod_df['Mag_Lat'] = mlat[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+    mod_df['Mag_Lon'] = mlon[(mlat >= sw_mlat1) & (mlat <= sw_mlat2)]
+    mod_df['alt'] = np.ones(len(mod_ne_return)) * mod_dc['alt'][n_a]
+    mod_df['Longitude'] = np.ones(len(mod_ne_return)) * mod_lon_ch[0]
+    mod_df['Latitude'] = mod_dc['glat'][((mlat >= sw_mlat1)
+                                         & (mlat <= sw_mlat2))]
 
-    nimo_nmf2 = nimo_dc['nmf2'][n_t, :, :]
-    nimo_lat = nimo_dc['glat']
-    nimo_lon = nimo_dc['glon']
-    nimo_map = {
-        'nmf2': nimo_nmf2, 'glon': nimo_lon, 'glat': nimo_lat
-    }
-    return nimo_df, nimo_map
+    # Save the model map dictionary
+    mod_map = {'nmf2': mod_dc['nmf2'][n_t, :, :], 'glon': mod_dc['glon'],
+               'glat': mod_dc['glat']}
+
+    return mod_df, mod_map
 
 
-def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20,
-                         mad_tres=5):
-    """Find conjunctions between NIMO and Madrigal data.
+def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
+    """Find conjunctions between a model and Madrigal data.
 
     Parameters
     ----------
-    nimo_dc : dict
-        Dictionary of NIMO data
+    mod_dc : dict
+        Dictionary of model data
     mlat_val : double
         +/- magnetic latitude
     glon_val : double
@@ -184,9 +178,9 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20,
 
     Returns
     -------
-    nimo_df : pd.DataFrame
+    mod_df : pd.DataFrame
         NIMO data at Madrigal location/time
-    nimo_map : dict
+    mod_map : dict
         Dictionary of 2D arrays of TEC, geo lon, and geo lat for map plots
 
     """
@@ -194,60 +188,54 @@ def nimo_mad_conjunction(nimo_dc, mlat_val, glon_val, stime, max_tdif=20,
     etime = stime + dt.timedelta(minutes=max_tdif)
 
     # Get NIMO longitudes and time of conjunction
-    nimo_lon_ch = nimo_dc['glon'][(abs(nimo_dc['glon'] - glon_val)
-                                   == min(abs(nimo_dc['glon'] - glon_val)))]
-    nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime)
-                                 & (nimo_dc['time'] <= etime))]
-    if len(nimo_time) == 0:
-        nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime
-                                      - dt.timedelta(minutes=mad_tres))
-                                     & (nimo_dc['time'] <= etime))]
-        if len(nimo_time) == 0:
-            nimo_time = nimo_dc['time'][((nimo_dc['time'] >= stime)
-                                         & (nimo_dc['time'] <= etime
-                                            + dt.timedelta(minutes=mad_tres)))]
-    elif len(nimo_time) > 1:
-        nimo_time = [nimo_time[0]]
-    if len(nimo_time) == 0:
-        nimo_time = min(nimo_dc['time'], key=lambda t: abs(stime - t))
-        if nimo_time - stime < dt.timedelta(minutes=max_tdif):
-            nimo_time = [nimo_time]
+    mod_lon_ch = mod_dc['glon'][(abs(mod_dc['glon'] - glon_val)
+                                 == min(abs(mod_dc['glon'] - glon_val)))]
+    mod_time = mod_dc['time'][((mod_dc['time'] >= stime)
+                               & (mod_dc['time'] <= etime))]
+    if len(mod_time) == 0:
+        mod_time = mod_dc['time'][((mod_dc['time'] >= stime
+                                    - dt.timedelta(minutes=mad_tres))
+                                   & (mod_dc['time'] <= etime))]
+        if len(mod_time) == 0:
+            mod_time = mod_dc['time'][((mod_dc['time'] >= stime)
+                                       & (mod_dc['time'] <= etime
+                                          + dt.timedelta(minutes=mad_tres)))]
+    elif len(mod_time) > 1:
+        mod_time = [mod_time[0]]
+    if len(mod_time) == 0:
+        mod_time = min(mod_dc['time'], key=lambda t: abs(stime - t))
+        if mod_time - stime < dt.timedelta(minutes=max_tdif):
+            mod_time = [mod_time]
         else:
-            raise (ValueError
-                   (f"NIMO {nimo_time} - Mad{stime} > {max_tdif} min"))
+            raise ValueError(f"Model {mod_time} - Mad{stime} > {max_tdif} min")
 
-    # NIMO COINCIDENCE
+    # Model COINCIDENCE
     # time and longitude indices
-    n_t = np.where(nimo_time == nimo_dc['time'])[0][0]
-    n_l = np.where(nimo_lon_ch[0] == nimo_dc['glon'])[0][0]
+    n_t = np.where(mod_time == mod_dc['time'])[0][0]
+    n_l = np.where(mod_lon_ch[0] == mod_dc['glon'])[0][0]
 
-    nimo_tec_lat_all = nimo_dc['tec'][n_t, :, n_l]
+    mod_tec_lat_all = mod_dc['tec'][n_t, :, n_l]
+
     # Convert geo to mag coor
-    nimo_lon_ls = np.ones(len(nimo_dc['glat'])) * nimo_lon_ch[0]
-    mlat, mlon = coords.compute_magnetic_coords(nimo_dc['glat'],
-                                                nimo_lon_ls, nimo_time[0])
+    mod_lon_ls = np.ones(len(mod_dc['glat'])) * mod_lon_ch[0]
+    mlat, mlon = coords.compute_magnetic_coords(mod_dc['glat'],
+                                                mod_lon_ls, mod_time[0])
 
     mlat1 = -1 * abs(mlat_val)
     mlat2 = abs(mlat_val)
 
-    nimo_tec_return = nimo_tec_lat_all[(mlat >= mlat1) & (mlat <= mlat2)]
-    time_ls = []
-    for i in range(len(nimo_tec_return)):
-        time_ls.append(nimo_time)
+    mod_tec_return = mod_tec_lat_all[(mlat >= mlat1) & (mlat <= mlat2)]
+    time_ls = [mod_time for i in range(len(mod_tec_return))]
 
-    nimo_df = pd.DataFrame()
-    nimo_df['Time'] = time_ls
-    nimo_df['tec'] = nimo_tec_return
-    nimo_df['Mag_Lat'] = mlat[(mlat >= mlat1) & (mlat <= mlat2)]
-    nimo_df['Mag_Lon'] = mlon[(mlat >= mlat1) & (mlat <= mlat2)]
-    nimo_df['Longitude'] = np.ones(len(nimo_tec_return)) * nimo_lon_ch[0]
-    nimo_df['Latitude'] = nimo_dc['glat'][(mlat >= mlat1) & (mlat <= mlat2)]
+    mod_df = pd.DataFrame()
+    mod_df['Time'] = time_ls
+    mod_df['tec'] = mod_tec_return
+    mod_df['Mag_Lat'] = mlat[(mlat >= mlat1) & (mlat <= mlat2)]
+    mod_df['Mag_Lon'] = mlon[(mlat >= mlat1) & (mlat <= mlat2)]
+    mod_df['Longitude'] = np.ones(len(mod_tec_return)) * mod_lon_ch[0]
+    mod_df['Latitude'] = mod_dc['glat'][(mlat >= mlat1) & (mlat <= mlat2)]
 
-    nimo_nmf2 = nimo_dc['tec'][n_t, :, :]
-    nimo_lat = nimo_dc['glat']
-    nimo_lon = nimo_dc['glon']
-    nimo_map = {
-        'tec': nimo_nmf2, 'glon': nimo_lon, 'glat': nimo_lat
-    }
+    mod_map = {'tec': mod_dc['tec'][n_t, :, :], 'glon': mod_dc['glon'],
+               'glat': mod_dc['glat']}
 
-    return nimo_df, nimo_map
+    return mod_df, mod_map

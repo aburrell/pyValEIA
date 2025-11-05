@@ -48,9 +48,35 @@ def base_round(xvals, base=5):
         Values rounded to nearest base
 
     """
-    round_vals = np.floor(base * np.round(xvals.astype(np.float64) / base))
+    round_vals = np.floor(base * np.round(np.asarray(xvals).astype(np.float64)
+                                          / base))
 
     return round_vals
+
+
+def unique_threshold(xvals, thresh=0.01):
+    """Round values to the desired threshold and return a unique array.
+
+    Parameters
+    ----------
+    xvals : array-like
+        Values to be rounded
+    thresh : float
+        Threshold for uniqueness (default=0.01)
+
+    Returns
+    -------
+    uvals : array-like
+        Unique values at the desired threshold level
+
+    """
+    # Number of decimal places
+    ndec = int(abs(np.log10(thresh)))
+
+    # Threshold here is our base in rounding
+    uvals = np.unique(np.round(xvals, ndec))
+
+    return uvals
 
 
 def set_dif_thresh(lat_span, percent=0.05):
