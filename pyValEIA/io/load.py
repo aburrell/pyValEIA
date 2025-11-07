@@ -139,7 +139,7 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
     # Set variables to be renamed
     rename = {'LP': {'Flags_Ne': 'Ne_flag', 'Flags_Te': 'Te_flag',
-                     'Flags_LP': 'LP_flag'}}
+                     'Flags_LP': 'LP_flag', 'Radius': 'Altitude'}}
 
     # Initalize the output
     swarm_data = pd.DataFrame()
@@ -192,6 +192,7 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
                 data[lat_var], data[lon_var], data['Time'][0])
             data['LT'] = coords.longitude_to_local_time(data[lon_var],
                                                         data['Time'])
+            data['Radius'] -= coords.earth_radius(data[lat_var])
 
             if swarm_data.empty:
                 swarm_data = pd.DataFrame(data)
