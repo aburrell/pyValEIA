@@ -97,13 +97,13 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
     # iterate through latitudes
     for i, l in enumerate(lat):
         # convert latitude to raidans
-        lat_rad = l * (math.pi / 180)
+        lat_rad = l * (np.pi / 180)
 
         # caluclat earth's raidus at a specific altitude
-        eq_top = (((Re ** 2 * math.cos(lat_rad)) ** 2)
-                  + ((Rp ** 2 * math.sin(lat_rad)) ** 2))
-        eq_bot = (((Re * math.cos(lat_rad)) ** 2)
-                  + ((Rp * math.sin(lat_rad)) ** 2))
+        eq_top = (((Re ** 2 * np.cos(lat_rad)) ** 2)
+                  + ((Rp ** 2 * np.sin(lat_rad)) ** 2))
+        eq_bot = (((Re * np.cos(lat_rad)) ** 2)
+                  + ((Rp * np.sin(lat_rad)) ** 2))
 
         # take square root and append
         Rearth.append((eq_top / eq_bot) ** 0.5)
