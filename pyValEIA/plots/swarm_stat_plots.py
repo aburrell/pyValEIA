@@ -20,7 +20,8 @@ from pyValEIA.stats import tables
 
 def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                    model2_name='Model2', PorC='PC',
-                   DayNight=True, LT_range=[7, 19], coin=True):
+                   DayNight=True, LT_range=None, coin=True, lssylim=None,
+                   lssxlim=None):
     """Plot LSS vs CSI or PC 4 panels (one for each LSS).
 
     Parameters
@@ -42,12 +43,16 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     DayNight : bool kwarg
         True (default) if panels should have separate markers for day and night
         otherwise (false) all are plotted together
-    LT_range : list kwarg
-        Range of day night local time, Default is 7 LT to 19 LT for day and
-        19 LT to 7 LT for Night
+    LT_range : list-like or NoneType
+        Range of day night local time, or None for default of [7, 19]
+        (default=None)
     coin : bool kwarg
         If True, coin LSS will be plotted for comparison (default)
         if false, coin LSS will not be plotted
+     lssylim : list-like or NoneType
+        y axis limit, defaults to [-1,1] if None is provided (default=None)
+    lssxlim : list-like or NoneType
+        y axis limit, defaults to [0,1] if None is provided (default=None)
 
     Returns
     -------
@@ -63,6 +68,15 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     LSS can range outside of +/-1
 
     """
+    # Update to default for kwargs
+    if LT_range is None:
+        LT_range = [7, 19]
+
+    if lssxlim is None:
+        lssxlim = [0, 1]
+
+    if lssylim is None:
+        lssylim = [-1, 1]
 
     # Set date array for given time range
     date_array = date_range.to_pydatetime()
@@ -71,10 +85,18 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     sats = np.unique(model1['Sat'])
 
     # let's make a plot of changing PC or CSI
-    fig, axs = plt.subplots(2, 2, figsize=(11, 11))
+    fig = plt.figure(figsize=(10, 10))
+    gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.25], hspace=0.1)
+
+    # Initialize Axes
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, 0])
+    ax4 = fig.add_subplot(gs[1, 1])
+
     look = ['All']
-    cols1 = ['blue']
-    cols2 = ['orange']
+    cols2 = ['purple']
+    cols1 = ['darkorange']
     colsc = ['black']
 
     # IF DayNight Separation is specified
@@ -87,9 +109,10 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                              & (model2['LT'] < LT_range[1]))]
         model2_night = model2[((model2['LT'] < LT_range[0])
                                | (model2['LT'] > LT_range[1]))]
+
         look = ['Day', 'Night']
-        cols1 = ['skyblue', 'blue']
-        cols2 = ['salmon', 'red']
+        cols2 = ['plum', 'purple']
+        cols1 = ['#FFD984', 'darkorange']
         colsc = ['gray', 'black']
 
     look = np.array(look)
@@ -99,10 +122,10 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
         colc = colsc[lo]
         for j, s in enumerate(sats):
             if DayNight:
-                if lo == 0:
+                if look[lo] == 'Day':
                     model1_sat = model1_day[model1_day['Sat'] == s]
                     model2_sat = model2_day[model2_day['Sat'] == s]
-                elif lo == 1:
+                elif look[lo] == 'Night':
                     model1_sat = model1_night[model1_night['Sat'] == s]
                     model2_sat = model2_night[model2_night['Sat'] == s]
             else:
@@ -143,60 +166,57 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                 exes = np.array([CSI_coin, CSI_1, CSI_2])
 
             # Establish axes
-            for i in range(4):
-                if i == 0:
-                    ax = axs[0, 0]
-                if i == 1:
-                    ax = axs[0, 1]
-                if i == 2:
-                    ax = axs[1, 0]
-                if i == 3:
-                    ax = axs[1, 1]
-
+            for i, ax in enumerate([ax1, ax2, ax3, ax4]):
                 # Plot Satellite names as text
                 # only plot coin toss if specified as True
                 if coin:
                     ax.text(exes[0], lss_coin[i], s, fontsize=12, color=colc,
                             label=None)
-                ax.text(exes[1], lss_mod1[i], s, fontsize=12, color=col1,
-                        label=None)
-                ax.text(exes[2], lss_mod2[i], s, fontsize=12, color=col2,
-                        label=None)
+
+                # Model 1
+                ax.scatter(exes[1], LSS_mod1[i], marker=f'${s}$', color=col1,
+                           s=80)
+                ax.scatter(exes[1], LSS_mod1[i], marker='o', edgecolors=col1,
+                           facecolors='none', s=160, linewidth=2, zorder=0)
+                # Model 2
+                ax.scatter(exes[2], LSS_mod2[i], marker=f'${s}$', color=col2,
+                          s=100)
 
                 # Set labels depending on plot number
                 if (i == 0) | (i == 2):
                     ax.set_ylabel('Skill Score')
-                ax.set_xlabel(lab)
-                ax.set_title('lss' + str(i + 1))
+                if (i == 0) | (i == 1):
+                    ax.xaxis.set_ticklabels([])
 
-                # Legend:
-                # If you want to plot the legend for both day and night colors
-                # in the first legend remove "& (lo == 0)"
-                if (i == 0) & (j == 0) & (lo == 0):
-                    ax.plot(-99, -99, color=col2, label=model2_name)
-                    ax.plot(-99, -99, color=col1, label=model1_name)
-                    if coin:
-                        ax.plot(-99, -99, color=colc, label='Coin Flip')
-                    ax.legend()
-                if (i == 1) & (lo == 0) & (j == 0):
-                    lab1 = (str(np.round(min(model1_sat['LT']), 1))
-                            + '-' + str(np.round(max(model1_sat['LT']), 1))
-                            + ' LT')
-                    ax.plot(-99, -99, color=col1, label=lab1)
-                if (i == 1) & (lo == 1) & (j == 0):
-                    lab1 = (str(np.round(min(model1_sat['LT']), 1))
-                            + '-' + str(np.round(max(model1_sat['LT']), 1))
-                            + ' LT')
-                    ax.plot(-99, -99, color=col1, label=lab1)
-                    ax.legend()
+                if (i == 2) | (i == 3):
+                    ax.set_xlabel(lab)
 
-                ax.set_ylim([-1, 1])
-                ax.set_xlim([0, 1])
+                if (i == 1) | (i == 3):
+                    ax.yaxis.set_ticklabels([])
 
-    # Add super title
-    plt.suptitle((eia_type + ' ' + date_array[0].strftime('%Y/%m/%d') + '-'
-                  + date_array[-1].strftime('%Y/%m/%d')), x=0.5, y=0.92,
-                 fontsize=17)
+                ax.set_title('LSS' + str(i + 1))
+                ax.grid(True)
+                ax.set_ylim(lssylim)
+                ax.set_xlim(lssxlim)
+
+    leg_ax = fig.add_subplot(gs[0, 2])
+
+    # Get day and night labels
+    day_lab, night_lab = daynight_label(model1, LT_range=LT_range)
+
+    # set up legend params
+    leg_labs = [model1_name, model2_name, 'Swarm A', 'Swarm B', 'Swarm C',
+                day_lab, night_lab]
+    leg_cols = ['orange', 'purple', 'k', 'k', 'k', 'lightgray','k']
+    leg_modes = ['scatter', 'line', 'scatter', 'scatter', 'scatter',
+                 'line', 'line']
+    leg_styles = ['$O$', '-', '$A$', '$B$', '$C$', '-', '-']
+
+    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                frameon=False, loc='center')
+
+    plt.suptitle(('Liemohn Skill Score ' + date_array[0].strftime('%b %Y')),
+                 x=0.45, y=0.92)
     return fig
 
 
@@ -632,10 +652,10 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type, colors=None):
                            (model_name, eia_type))] / N_tot
 
         # plot
-        plt.text(yy, yy, s, fontsize=12, color=col)
-        plt.text(yn, -yn, s, fontsize=12, color=col)
-        plt.text(-nn, -nn, s, fontsize=12, color=col)
-        plt.text(-ny, ny, s, fontsize=12, color=col)
+        plt.scatter(yy, yy, marker=f'${s}$', color=col, s=90)
+        plt.scatter(yn, -1 * yn, marker=f'${s}$', color=col, s=90)
+        plt.scatter(-1 * nn, -1 * nn, marker=f'${s}$', color=col, s=90)
+        plt.scatter(-1 * ny, ny, marker=f'${s}$', color=col, s=90)
 
     return fig
 
@@ -754,3 +774,303 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     plt.axhspan(-1, -0.5, xmin=0, xmax=0.25, color='green', alpha=0.2, lw=0)
 
     return fig
+
+
+def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
+                         bin_lons=37, model_name='Model', model2_name='Model2',
+                         fosi=16, hist_ylim=None, LT_range=None):
+    """ plot histogram maps on a 4 panel figure for each score: Hit, Miss,
+    False positive, and Correct Negative
+    Parameters
+    ----------
+    model_states : dataframe
+        dataframe of model data including skill and local times
+        built by states_report_swarm
+    sat : str
+        swarm satellite 'A', 'B', or 'C'
+    eia_type : str
+        eia state e.g. EIA, Peak, etc. depending on what is considered a hit
+    date_range : pandas daterange
+        range of dates for title purposes
+    bin_lons : int kwarg
+        number of bins between -180 and 180 deg geo lon
+        default 37
+        np.linspace(-180, 180, bin_lons)
+    model_name : str kwarg
+        name of model for title purposes
+        default 'Model'
+    fosi : int kwarg
+        font size for plot
+        default 16
+    hist_ylim : list-like or NoneType
+        y range (counts) for hist plot, or None for default of [0, 15]
+        (default=None)
+     LT_range : list-like or NoneType
+        Range of day night local time, or None for default of [7, 19]
+        (default=None)
+
+    Returns
+    -------
+    fig : figure handle
+        fig with 4 panels of hist maps
+    """
+    # Update defaults
+    if LT_range is None:
+        LT_range = [7, 19]
+
+    if hist_ylim is None:
+        hist_ylim = [0, 15]
+
+    # Creating Figure with GridSpec
+    scores = ["H", "M", "F", "C"]
+
+    # Get a specific Satellite
+    model_sat = model_states[model_states['Sat'] == sat]
+    model2_sat = model2_states[model2_states['Sat'] == sat]
+
+    fig = plt.figure(figsize=(18, 16))
+    gs = gridspec.GridSpec(3, 4, height_ratios=[1, 1, 0.25], wspace=0.3)
+    plt.rcParams.update({'font.size': fosi})
+
+    for s, score in enumerate(scores):
+
+        # Get models by score (HMFC)
+        model_score = model_sat[model_sat['skill'] == score]
+        model2_score = model2_sat[model2_sat['skill'] == score]
+
+        # Panel 1: World Map with Longitude Histogram
+        if s == 0:
+            ax0 = fig.add_subplot(gs[0, 0:2], projection=ccrs.PlateCarree())
+        elif s == 1:
+            ax0 = fig.add_subplot(gs[0, 2:], projection=ccrs.PlateCarree())
+        elif s == 2:
+            ax0 = fig.add_subplot(gs[1, 0:2], projection=ccrs.PlateCarree())
+        elif s == 3:
+            ax0 = fig.add_subplot(gs[1, 2:], projection=ccrs.PlateCarree())
+
+        ax0, hist_ax = map_2hist_panel(ax0, model_score, model2_score,
+                                       bin_lons=bin_lons,
+                                       DayNight=True, LT_range=LT_range)
+
+        # Add skill titles
+        ax0.set_aspect('auto', adjustable='box')
+        if score == 'H':
+            ax0.text(-160, 95, 'HIT', fontweight='bold', color='black')
+        elif score == 'M':
+            ax0.text(-160, 95, 'MISS', fontweight='bold', color='black')
+        elif score == 'C':
+            ax0.text(-160, -105, 'CORRECT NEGATIVE', fontweight='bold',
+                     color='black')
+        elif score == 'F':
+            ax0.text(-160, -105, 'FALSE POSITIVE', fontweight='bold',
+                     color='black')
+
+        # Move Latitude Axis (Secondary Y-Axis) to the right
+        if (s == 1) | (s == 3):
+            secax_y = ax0.twinx()
+            secax_y.set_ylim(ax0.get_ylim())
+            secax_y.set_ylabel("Latitude", color='gray',
+                               rotation=270)
+            secax_y.tick_params(axis='y', colors='gray')
+            secax_y.yaxis.set_major_locator(mticker.MultipleLocator(base=30))
+            secax_y.yaxis.set_label_position('right')
+            secax_y.yaxis.tick_right()
+            secax_y.spines['left'].set_visible(False)  # Hide right y-axis
+            secax_y.spines['right'].set_visible(True)   # Show left y-axis
+            format_latitude_labels(secax_y, xy='y')
+        else:
+            ax0.set_yticklabels([])
+
+        if (s == 0) | (s == 2):
+            hist_ax.yaxis.set_label_position('left')
+            hist_ax.yaxis.tick_left()
+            hist_ax.set_ylabel('Counts', color='k')
+            hist_ax.tick_params(axis='y', colors='k') # Y-axis tick labels
+            hist_ax.set_ylim(hist_ylim)
+            hist_ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+            hist_ax.yaxis.set_major_locator(mticker.MultipleLocator(base=2))
+        else:  # remove y axis
+            hist_ax.spines['right'].set_visible(False)
+            hist_ax.set_yticks([])
+            hist_ax.set_ylim(hist_ylim)
+
+        hist_ax.set_xlim(-180, 180)
+
+    # Secondary X-Axis for the Map
+        if (s == 2) | (s == 3):
+            secax_x = ax0.twiny()
+            secax_x.set_xlim(ax0.get_xlim())
+            secax_x.set_xlabel("Longitude")
+            secax_x.xaxis.set_major_locator(mticker.MultipleLocator(base=60))
+            format_longitude_labels(secax_x, xy='x')
+            secax_x.grid(True)
+        else:
+            secax_x = ax0.twiny()
+            secax_x.set_xlim(ax0.get_xlim())
+            secax_x.set_xticklabels([])
+            secax_x.grid(True)
+            secax_x.tick_params(axis='both', which='major', length=0, width=0)
+            hist_ax.set_xticklabels([])
+
+    if eia_type == 'eia':
+        eia_title = 'EIA'
+    else:
+        eia_title = eia_type
+
+    # Add legend
+    # Get day and night labels
+    day_lab, night_lab = daynight_label(model_states, LT_range=LT_range)
+
+    # legend axis
+    leg_ax = fig.add_subplot(gs[2, 0])
+
+    leg_cols = ['#FFD984']
+    leg_labs = [f'{model_name} {day_lab}']
+    leg_modes = ['shading']
+    leg_styles = ['-']
+    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                frameon=False)
+
+    # legend axis
+    leg_ax = fig.add_subplot(gs[2, 1])
+
+    leg_cols = ['darkorange']
+    leg_labs = [f'{model_name} {night_lab}']
+    leg_modes = ['shading']
+    leg_styles = ['-']
+    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                frameon=False)
+
+    # legend axis
+    leg_ax = fig.add_subplot(gs[2, 2])
+    leg_cols = ['#B65FCF']
+    leg_labs = [f'{model2_name} {day_lab}']
+    leg_modes = ['line']
+    leg_styles = ['-']
+
+    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                frameon=False)
+
+    # legend axis
+    leg_ax = fig.add_subplot(gs[2, 3])
+    leg_cols = ['purple']
+    leg_labs = [f'{model2_name} {night_lab}']
+    leg_modes = ['line']
+    leg_styles = ['--']
+
+    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                frameon=False)
+
+    # Add title
+    date_str = date_range[0].strftime('%b %Y')
+    fig.suptitle(
+        f"{date_str} Swarm {sat}",
+        x=0.5, y=0.93)  # fontweight="bold"
+
+
+    return fig
+
+
+def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
+                    LT_range=None):
+    """Plot histogram maps on a panel for 2 models.
+
+    Parameters
+    ----------
+    ax : plt axis
+        matplotlib.plt axis
+    model : dataframe
+        dataframe of model data including skill and local times
+        built by states_report_swarm
+    bin_lons : int kwarg
+        number of bins between -180 and 180 deg geo lon
+        np.linspace(-180, 180, bin_lons)
+    DayNight : bool kwarg
+        True (default) if panels should have separate markers for day and night
+        otherwise (false) all are plotted together
+    LT_range : list-like or NoneType
+        Range of day night local time, or None for default of [7, 19]
+        (default=None)
+
+    Returns
+    -------
+    ax : plt axis
+        original axis with data plotted
+    hist_ax : plt axis
+        twinx axis to ax with histogram plotted
+
+    """
+    # Update defaults
+    if LT_range is None:
+        LT_range = [7, 19]
+
+    # Initialize histogram bins
+    hist_bins = np.linspace(-180, 180, bin_lons)
+
+    # PLot Map
+    ax.set_global()
+    ax.add_feature(cfeature.LAND, edgecolor='gray', facecolor='none')
+    ax.add_feature(cfeature.COASTLINE, edgecolor='gray', facecolor='none')
+    ax.set_xticklabels([])
+
+
+    # Fix aspect ratio issue
+    ax.set_aspect('auto', adjustable='box')
+
+    # Set Histogram axis
+    hist_ax = ax.twinx()
+
+    # IF DayNight Separation is specified
+    if DayNight:
+        model_day = model[((model['LT'] > LT_range[0])
+                           & (model['LT'] < LT_range[1]))]
+        model_night = model[((model['LT'] < LT_range[0])
+                             | (model['LT'] > LT_range[1]))]
+
+        model2_day = model2[((model2['LT'] > LT_range[0])
+                             & (model2['LT'] < LT_range[1]))]
+        model2_night = model2[((model2['LT'] < LT_range[0])
+                               | (model2['LT'] > LT_range[1]))]
+
+        look = ['Day', 'Night']
+        colsh = ['salmon', 'lightblue']
+        colsh = ['#FFD984', 'darkorange']
+
+        # Day
+        lon_day = model_day['GLon']
+        if len(model_day['LT']) > 0:
+            day_str = (str(int(np.trunc(min(model_day['LT'])))) + ' to '
+                       + str(int(np.round(max(model_day['LT'])))))
+        else:
+            day_str = ''
+        hist_ax.hist(lon_day, bins=hist_bins, color=colsh[0],
+                     alpha=0.8, label=look[0]+' '+day_str+' LT')
+
+        # Plot Model 2 hist as a line
+        #hval_day, bin_edges = np.histogram(model2_day['GLon'],
+         #                                   bins=hist_bins)
+        #bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        #hist_ax.plot(bin_centers, hval_day, linestyle='--', color='purple')
+        hist_ax.hist(model2_day['GLon'], bins=hist_bins, color='#B65FCF',
+                     histtype='step', linewidth=2)
+
+
+        # Night
+        lon_night = model_night['GLon']
+        if len(model_night['LT']) > 0:
+            night_str = (str(int(np.trunc(min(model_night['LT']))))
+                         + ' to ' + str(int(np.round(max(model_night['LT'])))))
+        else:
+            night_str = ''
+        hist_ax.hist(lon_night, bins=hist_bins, color=colsh[1],
+                     alpha=0.5, label=look[1]+' '+night_str+' LT')
+
+        # Plot Model 2 hist as a line
+        hist_ax.hist(model2_night['GLon'], bins=hist_bins, color='purple',
+                     histtype='step', linestyle='--', linewidth=2)
+
+    else:  # Day night not specified
+        lon = model['GLon']
+        hist_ax.hist(lon, bins=hist_bins, color=colsh[0], alpha=0.3)
+
+    return ax, hist_ax
