@@ -5,7 +5,9 @@
 # ----------------------------------------------------------------------------
 """Utility functions for formatting or creating plots."""
 
+from matplotlib.lines import Line2D
 import matplotlib.ticker as mticker
+from matplotlib.patch import Patch
 
 
 def format_latitude_labels(ax, xy='x'):
@@ -102,7 +104,7 @@ def format_longitude_labels(ax, xy='x'):
         'x' (defualt) or 'y' depending on which axis you want to have
         degree symbol E/W formatting
     """
-     if xy == 'x':
+    if xy == 'x':
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(longitude_formatter))
     elif xy == 'y':
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(longitude_formatter))
@@ -155,6 +157,7 @@ def make_legend(leg_ax, leg_labs, leg_cols, leg_styles, modes, **kwargs):
 
     return
 
+
 def daynight_label(model, LT_range=None):
     """Generate Label for local time day and night.
 
@@ -179,29 +182,22 @@ def daynight_label(model, LT_range=None):
 
     # Separate day and night
     model_day = model[((model['LT'] > LT_range[0])
-                         & (model['LT'] < LT_range[1]))]
+                       & (model['LT'] < LT_range[1]))]
     model_night = model[((model['LT'] < LT_range[0])
-                           | (model['LT'] > LT_range[1]))]
+                         | (model['LT'] > LT_range[1]))]
 
     # Day label form minimum LT to maximum LT
-    day_lab = (str(int(min(model_day['LT'])))
-                            + '-' + str(int(max(model_day['LT'])))
-                            + ' LT')
+    day_lab = str(int(min(model_day['LT']))) + '-' + str(
+        int(max(model_day['LT']))) + ' LT'
 
     # night label depends on what the max and min are
     max_night = max(model_night['LT'])
     min_night = min(model_night['LT'])
 
     if (min_night < 12) & (max_night > 12):
-        # minimum is between 0 and 12 do max to min
-        # i.e. 23 to 3
-        night_lab = (str(int(max_night))
-                            + '-' + str(int(min_night))
-                            + ' LT')
+        # minimum is between 0 and 12 do max to min, i.e. 23 to 3
+        night_lab = str(int(max_night)) + '-' + str(int(min_night)) + ' LT'
     else:
-        # minimum is greater than 12 do min to max
-        # i.e. 20 to 23 or 1 to 5
-        night_lab = (str(int(min_night))
-                            + '-' + str(int(max_night))
-                            + ' LT')
+        # minimum is greater than 12 do min to max, i.e. 20 to 23 or 1 to 5
+        night_lab = str(int(min_night)) + '-' + str(int(max_night)) + ' LT'
     return day_lab, night_lab
