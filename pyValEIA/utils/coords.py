@@ -71,3 +71,44 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
     mlat, mlon = apex.convert(lat, lon, 'geo', mag_type)
 
     return mlat, mlon
+
+
+def earth_radius(lat, Re=6378137, Rp=6356752):
+    """Convert altitude in radius to km using earth's radius at a given lat.
+
+    Parameters
+    ----------
+    lat : array-like
+        latitude array
+    Re : float
+        Radius of Earth's equator in meters (default=6378137)
+    Rp : float
+        Radius of Earth's poles in meters (default=6356752)
+
+    Returns
+    -------
+    Rearth : array-like
+        Earth's radius in km at given latitudes
+
+    """
+
+    Rearth = []
+
+    # iterate through latitudes
+    for i, l in enumerate(lat):
+        # convert latitude to raidans
+        lat_rad = l * (math.pi / 180)
+
+        # caluclat earth's raidus at a specific altitude
+        eq_top = (((Re ** 2 * math.cos(lat_rad)) ** 2)
+                  + ((Rp ** 2 * math.sin(lat_rad)) ** 2))
+        eq_bot = (((Re * math.cos(lat_rad)) ** 2)
+                  + ((Rp * math.sin(lat_rad)) ** 2))
+
+        # take square root and append
+        Rearth.append((eq_top / eq_bot) ** 0.5)
+
+    # convert to array
+    Rearth = np.array(Rearth)
+
+    return Rearth
