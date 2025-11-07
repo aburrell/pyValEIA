@@ -94,20 +94,30 @@ def longitude_formatter(longitude, pos):
 
 
 def format_longitude_labels(ax, xy='x'):
-    """Formats the longitude axis labels with degree symbols and E/W suffixes.
+    """Format the longitude axis labels with degree symbols and E/W suffixes.
 
     Parameters
     ----------
     ax : matplotlib.axes.Axes
         The Matplotlib axes object
     xy : str kwarg
-        'x' (defualt) or 'y' depending on which axis you want to have
-        degree symbol E/W formatting
+        'x', 'y', or 'z' depending on which axis you want to have the degree
+        symbol with E/W formatting (default='x')
+
+    Raises
+    ------
+    ValueError
+        If unknown axis supplied.
+
     """
-    if xy == 'x':
+    if xy.lower() == 'x':
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(longitude_formatter))
-    elif xy == 'y':
+    elif xy.lower() == 'y':
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(longitude_formatter))
+    elif xy.lower() == 'z':
+        ax.zaxis.set_major_formatter(mticker.FuncFormatter(latitude_formatter))
+    else:
+        raise ValueError('unknown axis requested: {:}'.format(xy))
 
     return
 

@@ -783,8 +783,8 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
 def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
                          bin_lons=37, model_name='Model', model2_name='Model2',
                          fosi=16, hist_ylim=None, LT_range=None):
-    """ plot histogram maps on a 4 panel figure for each score: Hit, Miss,
-    False positive, and Correct Negative
+    """Plot histogram maps for each score: Hit, Miss, False Pos, and Cor Neg.
+
     Parameters
     ----------
     model_states : dataframe
@@ -817,6 +817,7 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     -------
     fig : figure handle
         fig with 4 panels of hist maps
+
     """
     # Update defaults
     if LT_range is None:
