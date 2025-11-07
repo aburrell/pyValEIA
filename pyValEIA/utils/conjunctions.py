@@ -111,7 +111,7 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
 
     # Get the altitude from alt_str and inc
     if alt_str == 'hmf2':  # hmf2(time, lat, lon)
-        alt = np.mean(nimo_dc['hmf2'][n_t, :, n_l])
+        alt = np.mean(mod_dc['hmf2'][n_t, :, n_l])
     else:
         alt = sw_alt
 
