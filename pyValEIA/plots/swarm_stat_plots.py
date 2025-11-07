@@ -8,12 +8,14 @@
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import warnings
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
+import pyValEIA.plots.utils as putils
 from pyValEIA.stats import skill_score
 from pyValEIA.stats import tables
 
@@ -174,13 +176,13 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
                             label=None)
 
                 # Model 1
-                ax.scatter(exes[1], LSS_mod1[i], marker=f'${s}$', color=col1,
+                ax.scatter(exes[1], lss_mod1[i], marker=f'${s}$', color=col1,
                            s=80)
-                ax.scatter(exes[1], LSS_mod1[i], marker='o', edgecolors=col1,
+                ax.scatter(exes[1], lss_mod1[i], marker='o', edgecolors=col1,
                            facecolors='none', s=160, linewidth=2, zorder=0)
                 # Model 2
-                ax.scatter(exes[2], LSS_mod2[i], marker=f'${s}$', color=col2,
-                          s=100)
+                ax.scatter(exes[2], lss_mod2[i], marker=f'${s}$', color=col2,
+                           s=100)
 
                 # Set labels depending on plot number
                 if (i == 0) | (i == 2):
@@ -202,18 +204,18 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     leg_ax = fig.add_subplot(gs[0, 2])
 
     # Get day and night labels
-    day_lab, night_lab = daynight_label(model1, LT_range=LT_range)
+    day_lab, night_lab = putils.daynight_label(model1, LT_range=LT_range)
 
     # set up legend params
     leg_labs = [model1_name, model2_name, 'Swarm A', 'Swarm B', 'Swarm C',
                 day_lab, night_lab]
-    leg_cols = ['orange', 'purple', 'k', 'k', 'k', 'lightgray','k']
+    leg_cols = ['orange', 'purple', 'k', 'k', 'k', 'lightgray', 'k']
     leg_modes = ['scatter', 'line', 'scatter', 'scatter', 'scatter',
                  'line', 'line']
     leg_styles = ['$O$', '-', '$A$', '$B$', '$C$', '-', '-']
 
-    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
-                frameon=False, loc='center')
+    putils.make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                       frameon=False, loc='center')
 
     plt.suptitle(('Liemohn Skill Score ' + date_array[0].strftime('%b %Y')),
                  x=0.45, y=0.92)
@@ -579,6 +581,7 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
             secax_x.set_xlabel("Longitude (\N{DEGREE SIGN})")
         else:
             hist_ax.set_xticklabels([])
+
     if eia_type == 'eia':
         eia_title = 'EIA'
     else:
@@ -589,6 +592,7 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
     fig.suptitle(
         f"{date_str} {model_name} vs SWARM Satellite {sat} Type: {eia_title}",
         fontsize=25, fontweight="bold", x=0.5, y=0.98)
+
     # Adjust layout to prevent overlap
     return fig
 
@@ -877,7 +881,7 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
             secax_y.yaxis.tick_right()
             secax_y.spines['left'].set_visible(False)  # Hide right y-axis
             secax_y.spines['right'].set_visible(True)   # Show left y-axis
-            format_latitude_labels(secax_y, xy='y')
+            putils.format_latitude_labels(secax_y, xy='y')
         else:
             ax0.set_yticklabels([])
 
@@ -885,9 +889,9 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
             hist_ax.yaxis.set_label_position('left')
             hist_ax.yaxis.tick_left()
             hist_ax.set_ylabel('Counts', color='k')
-            hist_ax.tick_params(axis='y', colors='k') # Y-axis tick labels
+            hist_ax.tick_params(axis='y', colors='k')  # Y-axis tick labels
             hist_ax.set_ylim(hist_ylim)
-            hist_ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+            hist_ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
             hist_ax.yaxis.set_major_locator(mticker.MultipleLocator(base=2))
         else:  # remove y axis
             hist_ax.spines['right'].set_visible(False)
@@ -902,7 +906,7 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
             secax_x.set_xlim(ax0.get_xlim())
             secax_x.set_xlabel("Longitude")
             secax_x.xaxis.set_major_locator(mticker.MultipleLocator(base=60))
-            format_longitude_labels(secax_x, xy='x')
+            putils.format_longitude_labels(secax_x, xy='x')
             secax_x.grid(True)
         else:
             secax_x = ax0.twiny()
@@ -912,14 +916,9 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
             secax_x.tick_params(axis='both', which='major', length=0, width=0)
             hist_ax.set_xticklabels([])
 
-    if eia_type == 'eia':
-        eia_title = 'EIA'
-    else:
-        eia_title = eia_type
-
     # Add legend
     # Get day and night labels
-    day_lab, night_lab = daynight_label(model_states, LT_range=LT_range)
+    day_lab, night_lab = putils.daynight_label(model_states, LT_range=LT_range)
 
     # legend axis
     leg_ax = fig.add_subplot(gs[2, 0])
@@ -928,8 +927,8 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     leg_labs = [f'{model_name} {day_lab}']
     leg_modes = ['shading']
     leg_styles = ['-']
-    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
-                frameon=False)
+    putils.make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                       frameon=False)
 
     # legend axis
     leg_ax = fig.add_subplot(gs[2, 1])
@@ -938,8 +937,8 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     leg_labs = [f'{model_name} {night_lab}']
     leg_modes = ['shading']
     leg_styles = ['-']
-    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
-                frameon=False)
+    putils.make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                       frameon=False)
 
     # legend axis
     leg_ax = fig.add_subplot(gs[2, 2])
@@ -948,8 +947,8 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     leg_modes = ['line']
     leg_styles = ['-']
 
-    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
-                frameon=False)
+    putils.make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                       frameon=False)
 
     # legend axis
     leg_ax = fig.add_subplot(gs[2, 3])
@@ -958,15 +957,12 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     leg_modes = ['line']
     leg_styles = ['--']
 
-    make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
-                frameon=False)
+    putils.make_legend(leg_ax, leg_labs, leg_cols, leg_styles, leg_modes,
+                       frameon=False)
 
     # Add title
     date_str = date_range[0].strftime('%b %Y')
-    fig.suptitle(
-        f"{date_str} Swarm {sat}",
-        x=0.5, y=0.93)  # fontweight="bold"
-
+    fig.suptitle(f"{date_str} Swarm {sat}", x=0.5, y=0.93)  # fontweight="bold"
 
     return fig
 
@@ -1013,7 +1009,6 @@ def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
     ax.add_feature(cfeature.COASTLINE, edgecolor='gray', facecolor='none')
     ax.set_xticklabels([])
 
-
     # Fix aspect ratio issue
     ax.set_aspect('auto', adjustable='box')
 
@@ -1044,16 +1039,11 @@ def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
         else:
             day_str = ''
         hist_ax.hist(lon_day, bins=hist_bins, color=colsh[0],
-                     alpha=0.8, label=look[0]+' '+day_str+' LT')
+                     alpha=0.8, label=look[0] + ' ' + day_str + ' LT')
 
         # Plot Model 2 hist as a line
-        #hval_day, bin_edges = np.histogram(model2_day['GLon'],
-         #                                   bins=hist_bins)
-        #bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        #hist_ax.plot(bin_centers, hval_day, linestyle='--', color='purple')
         hist_ax.hist(model2_day['GLon'], bins=hist_bins, color='#B65FCF',
                      histtype='step', linewidth=2)
-
 
         # Night
         lon_night = model_night['GLon']
@@ -1063,7 +1053,7 @@ def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
         else:
             night_str = ''
         hist_ax.hist(lon_night, bins=hist_bins, color=colsh[1],
-                     alpha=0.5, label=look[1]+' '+night_str+' LT')
+                     alpha=0.5, label=look[1] + ' ' + night_str + ' LT')
 
         # Plot Model 2 hist as a line
         hist_ax.hist(model2_night['GLon'], bins=hist_bins, color='purple',
