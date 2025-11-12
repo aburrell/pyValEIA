@@ -31,9 +31,15 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install standard dependencies
-      if: ${{ matrix.test_config != 'NEP29'}}
+    - name: Install standard dependencies Linux/Windows
+      if: ${{ matrix.test_config != 'NEP29' && matrix.os != 'macos-latest' }}
       run: pip install .[test]
+
+    - name: Install standard dependencies MacOS
+      if: ${{ matrix.test_config != 'NEP29' && matrix.os == 'macos-latest' }}
+      run:  |
+          brew reinstall gcc@15
+          CC=/usr/local/bin/gcc-15 FF=/usr/local/bin/gfortran-15 pip install --upgrade-strategy only-if-needed .[test]
 
     - name: Install NEP29 dependencies
       if: ${{ matrix.test_config == 'NEP29'}}
