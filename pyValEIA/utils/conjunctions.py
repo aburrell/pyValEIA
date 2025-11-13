@@ -70,6 +70,9 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
     sw_time1 = swarm_check["Time"].iloc[0] + dt.timedelta(days=offset)
     sw_time2 = swarm_check["Time"].iloc[-1] + dt.timedelta(days=offset)
 
+    # Use mediam swarm altitude for model
+    sw_alt = np.nanmedian(swarm_check['Altitude'])
+
     # Conjunction Longitude Range for Swarm
     sw_lon1 = min(swarm_check["Longitude"])
     sw_lon2 = max(swarm_check["Longitude"])
@@ -107,12 +110,10 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
     n_l = np.where(mod_lon_ch == mod_dc['glon'])[0][0]
 
     # Get the altitude from alt_str and inc
-    if (alt_str == 'A') or (alt_str == 'C'):
-        alt = 462
-    elif alt_str == 'B':
-        alt = 511
-    elif alt_str == 'hmf2':  # hmf2(time, lat, lon)
+    if alt_str == 'hmf2':  # hmf2(time, lat, lon)
         alt = np.mean(mod_dc['hmf2'][n_t, :, n_l])
+    else:
+        alt = sw_alt
 
     # Incriment by user specified altitude in km
     alt += inc
