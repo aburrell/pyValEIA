@@ -11,6 +11,7 @@ Summary of all changes made since the first release
 * ENH: added stats submodule with statistics routines
 * ENH: added eia submodule with routines to identify and classify the EIA
 * STY: cleaned up the docstrings to comply with PEP8
+* TST: updated MacOS installation for CI
 * BUG: updated swarm altitude handling
 * ENH: expanded the plotting suite
 * DOC: included a new stats plotting tutorial
