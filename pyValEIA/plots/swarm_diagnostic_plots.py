@@ -113,7 +113,7 @@ def swarm_panel(axs, stime, satellite, swarm_file_dir, MLat=30,
     # Get closest time to Input
     tim_arg = abs(sw_lat["Time"] - stime).argmin()
     if abs(sw_lat["Time"].iloc[tim_arg] - stime) > dt.timedelta(minutes=10):
-        print(f'Selecting {sw_lat["Time"].iloc[tim_arg]}')
+        logger.info(f'Selecting {sw_lat["Time"].iloc[tim_arg]}')
 
     # Choose latitudinally limited segment using gap indices
     gap_arg = abs(tim_arg - gaps).argmin()
@@ -672,7 +672,8 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
             # Check for funky orbits
             if abs(min(swarm_check['Longitude'])
                    - max(swarm_check['Longitude'])) > 5:
-                print('Odd Orbit longitude span > 5 degrees: Skipping Pass')
+                logger.info(
+                    'Odd Orbit longitude span > 5 degrees: Skipping Pass')
                 continue
 
             # Check that latitude ranges that are +/- 5 degrees from MLat
@@ -774,8 +775,9 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
 
             # Give user a heads up for an unknown type
             if eia_type_slope == 'unknown':
-                print('Swarm type unknown for Sat ' + sata)
-                print(swarm_check['Time'].iloc[-1].strftime('%Y/%m/%d %H:%M'))
+                logger.info(' '.join(['Swarm type unknown for Sat', sata, 'at',
+                                      swarm_check['Time'].iloc[-1].strftime(
+                                          '%Y/%m/%d %H:%M')]))
 
             # If user specified fig_on is True, create a figure
             if fig_on:
@@ -899,11 +901,12 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
 
                 # Give User a heads up for an unknown type
                 if eia_type_slope == 'unknown':
-                    print('Model EIA type unknown at ' + alt_str + ' height')
-                    print(mod_swarm_alt["Time"].iloc[0][0].strftime(
-                        '%Y/%m/%d_%H:%M:%S.%f'))
+                    logger.info(''.join([
+                        'Model EIA type unknown at ', alt_str, ' height: ',
+                        mod_swarm_alt["Time"].iloc[0][0].strftime(
+                            '%Y/%m/%d_%H:%M:%S.%f')]))
 
-                # general Model Info only need to save once per alt_arr
+                # General model info only need to save once per alt_arr
                 nts = '{:s}_Time'.format(col_mod_name)
                 if i == 0:
                     df.at[f, nts] = mod_swarm_alt["Time"].iloc[0][0].strftime(
@@ -1208,7 +1211,7 @@ def model_swarm_single_plot(stime, satellite, swarm_file_dir, mod_file_dir,
     # Get closest time to Input
     tim_arg = abs(sw_lat["Time"] - stime).argmin()
     if abs(sw_lat["Time"].iloc[tim_arg] - stime) > dt.timedelta(minutes=10):
-        print(f'Selecting {sw_lat["Time"].iloc[tim_arg]}')
+        logger.info(f'Selecting {sw_lat["Time"].iloc[tim_arg]}')
 
     # Choose latitudinally limited segment using gap indices
     gap_arg = abs(tim_arg - gaps).argmin()
