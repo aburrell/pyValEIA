@@ -775,9 +775,9 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
 
             # Give user a heads up for an unknown type
             if eia_type_slope == 'unknown':
-                logger.info(''.join(['Swarm type unknown for Sat ', sata,
-                                     ' at ', swarm_check['Time'].iloc[-1].strftime(
-                                         '%Y/%m/%d %H:%M')]))
+                logger.info(' '.join(['Swarm type unknown for Sat', sata, 'at',
+                                      swarm_check['Time'].iloc[-1].strftime(
+                                          '%Y/%m/%d %H:%M')]))
 
             # If user specified fig_on is True, create a figure
             if fig_on:
