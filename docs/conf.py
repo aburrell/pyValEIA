@@ -98,6 +98,17 @@ exclude_patterns = ['.build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+templates_path = ['.']
+html_use_smartypants = True
+html_last_updated_fmt = '%b %d, %Y'
+html_split_index = True
+html_sidebars = {'**': ['searchbox.html', 'globaltoc.html', 'sourcelink.html']}
+html_short_title = '-'.join([project, version])
+autodoc_member_order = 'bysource'
+autodoc_mock_imports = ['pyValEIA']
+napoleon_use_ivar = True
+napoleon_use_rtype = False
+napoleon_use_param = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
