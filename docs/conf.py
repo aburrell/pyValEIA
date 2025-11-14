@@ -29,7 +29,7 @@ info = PyProject.load("../pyproject.toml")
 project = 'pyValEIA'
 title = '{:s} Documentation'.format(project)
 author = 'the pyValEIA team'
-description = 'pyValEIA identifies and validates Equatorial Ionization Anomally morphology.'
+description = 'pyValEIA identifies and validates EIA morphology.'
 category = 'Space Physics'
 copyright = ', '.join(['2025', author])
 
