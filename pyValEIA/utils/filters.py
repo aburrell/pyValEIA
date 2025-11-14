@@ -72,10 +72,10 @@ def simple_barrel_roll(xvar, yvar, barrel_radius, envelope=True,
             del_y = y_roi[i] - strt_con_y
 
             # Calculate the rolling angles
-            theta = np.atan(del_y / del_x)
+            theta = np.arctan(del_y / del_x)
             if 2 * barrel_radius >= np.sqrt((del_x) ** 2 + (del_y) ** 2):
-                beta = np.asin(np.sqrt((del_x) ** 2 + (del_y) ** 2)
-                               / (2 * barrel_radius))
+                beta = np.arcsin(np.sqrt((del_x) ** 2 + (del_y) ** 2)
+                                 / (2 * barrel_radius))
             else:
                 beta = np.pi / 2.0
             delta = beta - theta
