@@ -61,7 +61,11 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
 
     See Also
     --------
-    apexpy.Apex.convert for differnt `mag_type` values.
+    apexpy.Apex.convert
+
+    Notes
+    -----
+    `mag_type` inputs are defined in `apexpy`.
 
     """
     # Initalize the Apex object
