@@ -14,7 +14,6 @@ and modeled data, and perform validations of the morphology structure.
    overview.rst
    installation.rst
    citing.rst
-   examples.rst
    api.rst
    develop_guide.rst
    history.rst
