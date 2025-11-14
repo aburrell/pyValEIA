@@ -1,0 +1,6 @@
+myst_parser
+numpydoc
+pyproject_parser
+sphinx
+sphinx-autoapi
+sphinx_rtd_theme
