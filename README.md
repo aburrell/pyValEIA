@@ -2,7 +2,7 @@ Package for validating the Equatorial Ionization Anomaly (EIA) within
 ionospheric models against in situ plasma density data and Vertical
 Total Electron Content (VTEC).
 
-[DOI HERE] [PYPI HERE] [UNIT TESTS]
+[DOI HERE] [PYPI HERE] [![Test Status](https://github.com/aburrell/pyValEIA/actions/workflows/main.yml/badge.svg)](https://github.com/aburrell/pyValEIA/actions/workflows/main.yml)
 
 Example
 -------
