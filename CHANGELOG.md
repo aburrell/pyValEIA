@@ -15,7 +15,8 @@ Summary of all changes made since the first release
 * STY: changed all print statements to logger statements
 * TST: updated MacOS installation for CI
 * TST: added CI testing for documentation
-* BUG: updated swarm altitude handling
+* BUG: updated Swarm altitude handling
+* BUG: updated list-like kwargs
 * DOC: included a new stats plotting tutorial
 * DOC: added basic documentation
 * DOC: added contributing guidelines
