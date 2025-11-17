@@ -56,6 +56,15 @@ test = [
   "flake8",
   "flake8-docstrings"
 ]
+doc = [
+  "myst_parser",
+  "numpydoc",
+  "pyproject_parser",
+  "sphinx",
+  "sphinx-autoapi",
+  "sphinx-rtd-theme"
+]
+
 
 [project.urls]
 Source = "https://github.com/aburrell/pyValEIA"
