@@ -21,9 +21,8 @@ from pyValEIA.stats import tables
 
 
 def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
-                   model2_name='Model2', PorC='PC',
-                   DayNight=True, LT_range=None, coin=True, lssylim=None,
-                   lssxlim=None):
+                   model2_name='Model2', PorC='PC', DayNight=True,
+                   LT_range=None, coin=True, lssylim=None, lssxlim=None):
     """Plot LSS vs CSI or PC 4 panels (one for each LSS).
 
     Parameters
@@ -223,7 +222,7 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
 
 
 def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
-                             PorC='PC', DayNight=True, LT_range=[7, 19],
+                             PorC='PC', DayNight=True, LT_range=None,
                              coin=True):
     """Plot LSS vs CSI or PC 4 panels (one for each LSS) for 1 model alone.
 
@@ -242,9 +241,10 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
     DayNight : bool kwarg
         True (default) if panels should have separate markers for day and night
         otherwise (false) all are plotted together
-    LT_range : list kwarg
-        Range of day night local time, Default is 7 LT to 19 LT for day and
-        19 LT to 7 LT for Night
+    LT_range : list-like or NoneType
+        Range of day night local time, or if None is supplied, [7, 19] is used
+        to specify 07:00-19:00 LT for daytime and 19:00-07:00 LT for nighttime
+        (default=None)
     coin : bool kwarg
         If True, coin LSS will be plotted for comparison (default)
         if false, coin LSS will not be plotted
@@ -264,6 +264,10 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
     coin set to True is highly recommended!
 
     """
+    # Update to default for kwargs
+    if LT_range is None:
+        LT_range = [7, 19]
+
     # Print Warning if coin is set to False
     if not coin:
         warnings.warn("Warning: Coin is False! LSS is a comparison tool!")
@@ -388,7 +392,7 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
     return fig
 
 
-def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
+def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=None):
     """Plot histogram maps on a panel.
 
     Parameters
@@ -398,15 +402,15 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
     model : DataFrame
         DataFrame of model data including skill and local times
         built by states_report_swarm
-    bin_lons : int kwarg
-        number of bins between -180 and 180 deg geo lon
-        np.linspace(-180, 180, bin_lons)
-    DayNight : bool kwarg
-        True (default) if panels should have separate markers for day and night
-        otherwise (false) all are plotted together
-    LT_range : list kwarg
-        Range of day night local time, Default is 7 LT to 19 LT for day and
-        19 LT to 7 LT for Night
+    bin_lons : int
+        Number of bins between -180 and 180 deg geo lon (default=37)
+    DayNight : bool
+        True if panels should have separate markers for day and night or False
+        for all to be plotted together (default=True)
+    LT_range : list-like or NoneType
+        Range of day night local time, or if None is supplied, [7, 19] is used
+        to specify 07:00-19:00 LT for daytime and 19:00-07:00 LT for nighttime
+        (default=None)
 
     Returns
     -------
@@ -416,6 +420,10 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
         twinx axis to ax with histogram plotted
 
     """
+    # Update to default for kwargs
+    if LT_range is None:
+        LT_range = [7, 19]
+
     # Initialize histogram bins
     hist_bins = np.linspace(-180, 180, bin_lons)
 
@@ -470,8 +478,8 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=[7, 19]):
 
 
 def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
-                        model_name='Model', fosi=16, hist_ylim=[0, 15],
-                        LT_range=[7, 19]):
+                        model_name='Model', fosi=16, hist_ylim=None,
+                        LT_range=None):
     """Plot histograms for each Hit, Miss, False Pos, and Cor Neg.
 
     Parameters
@@ -483,24 +491,20 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
         swarm satellite 'A', 'B', or 'C'
     eia_type : str
         eia state e.g. EIA, Peak, etc. depending on what is considered a hit
-    date_range : pandas daterange
+    date_range : pd.DateRange
         range of dates for title purposes
-    bin_lons : int kwarg
-        number of bins between -180 and 180 deg geo lon
-        default 37
-        np.linspace(-180, 180, bin_lons)
-    model_name : str kwarg
-        name of model for title purposes
-        default 'Model'
-    fosi : int kwarg
-        font size for plot
-        default 16
-    hist_ylim : list kwarg
-        y range (counts) for hist plot
-        default [0,15]
-    LT_range : list kwarg
-        Range of day night local time, Default is 7 LT to 19 LT for day and
-        19 LT to 7 LT for Night
+    bin_lons : int
+        Number of bins between -180 and 180 deg geo lon (default=37)
+    model_name : str
+        name of model for title purposes (default='Model')
+    fosi : int
+        font size for plot (default=16)
+    hist_ylim : list-like or NoneType
+        y range (counts) for hist plot, if None uses [0, 15] (default=None)
+    LT_range : list-like or NoneType
+        Range of day night local time, or if None is supplied, [7, 19] is used
+        to specify 07:00-19:00 LT for daytime and 19:00-07:00 LT for nighttime
+        (default=None)
 
     Returns
     -------
@@ -512,6 +516,13 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
     io.load.multiday_states_report
 
     """
+    # Update to default for kwargs
+    if LT_range is None:
+        LT_range = [7, 19]
+
+    if hist_ylim is None:
+        hist_ylim = [0, 15]
+
     # Creating Figure with GridSpec
     scores = ["H", "M", "F", "C"]
 
