@@ -912,7 +912,6 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
         else:
             secax_x = ax0.twiny()
             secax_x.set_xlim(ax0.get_xlim())
-            secax_x.xaxis.set_major_locator(mticker.MultipleLocator(base=60))
             secax_x.set_xticklabels([])
             secax_x.grid(True)
             secax_x.tick_params(axis='both', which='major', length=0, width=0)
