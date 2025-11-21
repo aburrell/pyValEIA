@@ -193,11 +193,10 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
             data['LT'] = coords.longitude_to_local_time(data[lon_var],
                                                         data['Time'])
 
-            # Convert radius to altitude in meters
+            # Convert altitude to km from meters
             data['Radius'] -= coords.earth_radius(data[lat_var])
-
-            # Convert altitude to km
             data['Radius'] = data['Radius'] / 1000
+
             if swarm_data.empty:
                 swarm_data = pd.DataFrame(data)
             else:
