@@ -77,8 +77,7 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
 
     # Make sure that altitude provided is reasonable
     if sw_alt > 600:
-        raise ValueError(
-                f"Altitude of {sw_alt} not reasonable for Swarmn")
+        raise ValueError(f"Altitude of {sw_alt} not reasonable for Swarm")
 
     # Conjunction Longitude Range for Swarm
     sw_lon1 = min(swarm_check["Longitude"])
