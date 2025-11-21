@@ -78,7 +78,7 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
 
 
 def earth_radius(lat, Re=6378137, Rp=6356752):
-    """Calculate earth's radius in meters at given latitudes.
+    """Calculate Earth's radius in meters at given latitudes.
 
     Parameters
     ----------
