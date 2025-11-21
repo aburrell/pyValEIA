@@ -92,7 +92,7 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
     Returns
     -------
     Rearth : array-like
-        Earth's radius in meters  at given latitudes
+        Earth's radius in meters at given latitudes
 
     """
 
