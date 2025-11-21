@@ -64,6 +64,8 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
     ------
     ValueError
         If NIMO time and starting Swarm time are more than `max_tdif` apart
+    ValueError
+        If Swarm altitude is greater than 600 km
 
     """
     # Define the start and end times for Swarm during the conjunction
@@ -72,6 +74,12 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
 
     # Use mediam swarm altitude for model
     sw_alt = np.nanmedian(swarm_check['Altitude'])
+
+    # Make sure that altitude provided is reasonable
+    if sw_alt > 600:
+        raise ValueError(
+                f"Altitude of {sw_alt} not reasonable for Swarmn")
+        
 
     # Conjunction Longitude Range for Swarm
     sw_lon1 = min(swarm_check["Longitude"])
