@@ -29,9 +29,9 @@ class TestTimeFuncs(unittest.TestCase):
     def evaluate_offset(self):
         """Evaluate the offset between UT and local time."""
         # Get the time difference in seconds regardless of the timezone
-        sec = (dt.datetime.strptime(self.out[0].strftime(
-            "%Y-%m-%d %H:%M:%S:%u"), "%Y-%m-%d %H:%M:%S:%u")
-               - self.dtime).total_seconds()
+        sec = (dt.datetime.strptime(
+            self.out[0].strftime("%Y-%m-%d %H:%M:%S:%u"),
+            "%Y-%m-%d %H:%M:%S:%u") - self.dtime).total_seconds()
         self.assertEqual(self.lon, sec / 240.0)
         return
 
