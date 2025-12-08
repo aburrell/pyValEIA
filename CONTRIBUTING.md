@@ -57,9 +57,9 @@ If you are proposing a new feature or a change in something that already exists:
 Development
 -----------
 
-To set up `pyIntensityFeatures` for local development:
+To set up `pyValEIA` for local development:
 
-1. [Fork pyIntensityFeatures on
+1. [Fork pyValEIA on
     GitHub](https://github.com/aburrell/pyValEIA/fork).
 
 2. Clone your fork locally:

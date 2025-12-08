@@ -22,5 +22,5 @@ first public release.  A journal article describing this method is forthcoming.
 	  title  = {pyValEIA: Alpha Release},
   	  year   = {2025},
 	  type   = {Software},
-	  version = {v0.1.0},
+	  version = {v0.0.2},
 	  }
