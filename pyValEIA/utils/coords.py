@@ -20,7 +20,7 @@ def longitude_to_local_time(longitude, utc_time):
     longitude : array-like
         longitudes
     utc_time : array-like
-        time in UT
+        Array of timestamps in UT
 
     Returns
     -------

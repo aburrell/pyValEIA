@@ -7,7 +7,7 @@
 
 from matplotlib.lines import Line2D
 import matplotlib.ticker as mticker
-from matplotlib.patch import Patch
+from matplotlib.patches import Patch
 
 
 def format_latitude_labels(ax, xy='x'):

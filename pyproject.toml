@@ -39,6 +39,7 @@ keywords = [
 dependencies = [
   "apexpy",
   "cartopy",
+  "cdflib",
   "matplotlib",
   "netCDF4",
   "numpy",

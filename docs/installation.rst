@@ -18,10 +18,11 @@ Space Physics community.  This module officially supports Python 3.10+.
  Common modules Community modules
  ============== =================
   cartopy       aacgmv2
-  matplotlib    apexpy
-  netCDF4       pydarn
-  numpy         PyIRI
-  pandas        pysatMadrigal
+  cdflib        apexpy
+  matplotlib    pydarn
+  netCDF4       PyIRI
+  numpy         pysatMadrigal
+  pandas
   requests
   scipy
  ============== =================
