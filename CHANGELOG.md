@@ -3,6 +3,10 @@ Changelog
 
 Summary of all changes made since the first release
 
+0.X.X (2026-XX-XX)
+------------------
+* TST: expanded the unit test suite
+
 0.0.2 (2025-XX-XX)
 ------------------
 * ENH: added io submodule with routines to download, load, and write data
