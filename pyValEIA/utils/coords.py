@@ -83,7 +83,7 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
     Parameters
     ----------
     lat : array-like
-        latitude array
+        Latitude array in degrees
     Re : float
         Radius of Earth's equator in meters (default=6378137)
     Rp : float
@@ -95,24 +95,15 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
         Earth's radius in meters at given latitudes
 
     """
+    # Convert latitude to raidans
+    lat_rad = np.radians(np.asarray(lat))
 
-    Rearth = []
+    # Caluclate Earth's radius at a specific altitude
+    eq_top = (((Re ** 2 * np.cos(lat_rad)) ** 2)
+              + ((Rp ** 2 * np.sin(lat_rad)) ** 2))
+    eq_bot = (((Re * np.cos(lat_rad)) ** 2) + ((Rp * np.sin(lat_rad)) ** 2))
 
-    # iterate through latitudes
-    for i, l in enumerate(lat):
-        # convert latitude to raidans
-        lat_rad = l * (np.pi / 180)
-
-        # caluclat earth's raidus at a specific altitude
-        eq_top = (((Re ** 2 * np.cos(lat_rad)) ** 2)
-                  + ((Rp ** 2 * np.sin(lat_rad)) ** 2))
-        eq_bot = (((Re * np.cos(lat_rad)) ** 2)
-                  + ((Rp * np.sin(lat_rad)) ** 2))
-
-        # take square root and append
-        Rearth.append((eq_top / eq_bot) ** 0.5)
-
-    # convert to array
-    Rearth = np.array(Rearth)
+    # Take square root of the ratio
+    Rearth = np.sqrt(eq_top / eq_bot)
 
     return Rearth
