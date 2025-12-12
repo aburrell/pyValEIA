@@ -91,3 +91,42 @@ class TestTimeFuncs(unittest.TestCase):
                         ValueError, 'cannot add indices of unequal length'):
                     coords.longitude_to_local_time(lon_in, ut_in)
         return
+
+
+class TestLocFuncs(unittest.TestCase):
+    """Tests for location-handling functions."""
+
+    def setUp(self):
+        """Set up the test runs."""
+        self.dtime = dt.datetime(1999, 2, 11)
+        self.lon = 10.0
+        self.lat = 0.0
+        self.ref_alt = 6378137.0
+        self.out = None
+        return
+
+    def tearDown(self):
+        """Tear down the test environment."""
+        del self.dtime, self.lon, self.lat, self.out
+        return
+
+    def test_earth_radius_float(self):
+        """Test the default earth radius calculation with float inputs."""
+        self.out = coords.earth_radius(self.lat)
+        self.assertAlmostEqual(self.out, self.ref_alt)
+        return
+
+    def test_earth_radius_list(self):
+        """Test the default earth radius calculation with list inputs."""
+        self.out = coords.earth_radius([self.lat, self.lat])
+        self.assertTrue((self.out == self.ref_alt).all())
+        self.assertTupleEqual(self.out.shape, (2,))
+        return
+
+    def test_earth_radius_array(self):
+        """Test the default earth radius calculation with list inputs."""
+        self.out = coords.earth_radius(np.full(shape=(3, 4),
+                                               fill_value=self.lat))
+        self.assertTrue((self.out == self.ref_alt).all())
+        self.assertTupleEqual(self.out.shape, (3, 4))
+        return
