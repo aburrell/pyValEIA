@@ -23,7 +23,7 @@ instructions so we can reproduce. Please also list any relevant details for
 your test configuration
 
 ```
-import pyIntensityFeatures
+import pyValEIA
 # Do a thing
 ```
 
@@ -46,4 +46,4 @@ import pyIntensityFeatures
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published in downstream modules
 - [ ] Add a note to ``Changelog.md``, summarising the changes
-- [ ] Add yourself to ``.zenodo.json``
+- [ ] Add yourself to ``CITATION.cff``

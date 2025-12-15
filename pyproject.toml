@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyValEIA"
-version = "0.0.1"
+version = "0.0.2"
 description = 'Validation tools for the Equatorial Ionization Anomally'
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +39,7 @@ keywords = [
 dependencies = [
   "apexpy",
   "cartopy",
+  "cdflib",
   "matplotlib",
   "netCDF4",
   "numpy",
@@ -56,6 +57,15 @@ test = [
   "flake8",
   "flake8-docstrings"
 ]
+doc = [
+  "myst_parser",
+  "numpydoc",
+  "pyproject_parser",
+  "sphinx",
+  "sphinx-autoapi",
+  "sphinx-rtd-theme"
+]
+
 
 [project.urls]
 Source = "https://github.com/aburrell/pyValEIA"

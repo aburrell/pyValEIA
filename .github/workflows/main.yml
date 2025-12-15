@@ -31,9 +31,15 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install standard dependencies
-      if: ${{ matrix.test_config != 'NEP29'}}
+    - name: Install standard dependencies Linux/Windows
+      if: ${{ matrix.test_config != 'NEP29' && matrix.os != 'macos-latest' }}
       run: pip install .[test]
+
+    - name: Install standard dependencies MacOS
+      if: ${{ matrix.test_config != 'NEP29' && matrix.os == 'macos-latest' }}
+      run:  |
+          brew reinstall gcc@15
+          CC=/opt/homebrew/bin/gcc-15 FF=/opt/homebrew/bin/gfortran-15 pip install --upgrade-strategy only-if-needed .[test]
 
     - name: Install NEP29 dependencies
       if: ${{ matrix.test_config == 'NEP29'}}
@@ -46,3 +52,30 @@ jobs:
 
     - name: Evaluate complexity
       run: flake8 . --count --exit-zero --max-complexity=10 --statistics
+
+    - name: Run unit and integration tests
+      run:  |
+        coverage run --rcfile=pyproject.toml -m unittest discover
+        coverage report
+        coverage xml --rcfile=pyproject.toml
+
+    - name: Coveralls Parallel
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        flag-name: run=${{ join(matrix.*, '-') }}
+        parallel: true
+        format: cobertura
+        debug: true
+
+  finish:
+    name: Finish Coverage Analysis
+    needs: build
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        parallel-finished: true
