@@ -38,7 +38,7 @@ def longitude_to_local_time(longitude, utc_time):
     return local_times
 
 
-def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
+def compute_magnetic_coords(lat, lon, epoch_time, height=0.0, mag_type='qd'):
     """Calculate magnetic coordinates from geodetic coordinates.
 
     Parameters
@@ -49,8 +49,10 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
         Longitudes in degrees East
     epoch_time : dt.datetime
         Universal time for IGRF coefficients
+    height : array-like
+        Altitude in km (default=0.0)
     mag_type : str
-        Magnetic coordinate type (default='qd')
+        Magnetic coordinate type, accepts 'geo', 'qd', and 'geo' (default='qd')
 
     Returns
     -------
@@ -65,14 +67,14 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
 
     Notes
     -----
-    `mag_type` inputs are defined in `apexpy`.
+    `mag_type` inputs are defined in `apexpy`. Does not accept 'mlt'.
 
     """
     # Initalize the Apex object
     apex = Apex(date=epoch_time)
 
     # Calculate the quasi-dipole coordinates
-    mlat, mlon = apex.convert(lat, lon, 'geo', mag_type)
+    mlat, mlon = apex.convert(lat, lon, 'geo', mag_type, height=height)
 
     return mlat, mlon
 
