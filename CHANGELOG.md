@@ -7,7 +7,7 @@ Summary of all changes made since the first release
 ------------------
 * TST: expanded the unit test suite
 
-0.0.2 (2025-XX-XX)
+0.0.2 (2025-12-15)
 ------------------
 * ENH: added io submodule with routines to download, load, and write data
 * ENH: added utils submodule with routines to support a range of utilites

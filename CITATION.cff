@@ -1,11 +1,13 @@
 title: pyValEIA
-version: 0.0.1
+version: 0.0.2
 cff-version: 1.2.0
 type: software
 repository-code: "https://github.com/aburrell/pyValEIA"
 authors:
   - family-names: "Cardenas-O'Toole"
     given-names: "Alanah"
+    affiliation: "University of Michigan"
+    orcid: "https://orcid.org/0000-0001-9665-3273"
   - family-names: "Burrell"
     given-names: "Angeline G."
     affiliation: "Naval Research Laboratory"
