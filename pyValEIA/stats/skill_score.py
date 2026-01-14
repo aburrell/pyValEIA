@@ -47,31 +47,21 @@ def state_check(truth_vals, test_vals, event_val='eia'):
     if len(test_vals) != len(truth_vals):
         raise ValueError('Number of test values are not equal to truth values')
 
-    # Initialize the output
-    event_states = []
+    # Initialize the output to be False
+    event_states = np.full(shape=len(test_vals), fill_value='F')
 
-    # Cycle through each test and truth value
-    for i, test in enumerate(test_vals):
-        truth = truth_vals[i]
+    # Get the masks for hits, misses, and correct negatives
+    hit_mask = (np.asarray(test_vals) == event_val) & (
+        np.asarray(truth_vals) == event_val)
+    miss_mask = (np.asarray(test_vals) != event_val) & (
+        np.asarray(truth_vals) == event_val)
+    corn_mask = (np.asarray(test_vals) != event_val) & (
+        np.asarray(truth_vals) != event_val)
 
-        # Determine the possible outcomes based on the truth observation
-        # of the desired event
-        if truth == event_val:
-            # This is either a hit or a miss, depending on whether or not the
-            # test value agrees with the truth value
-            if test == event_val:
-                event_states.append('H')
-            else:
-                event_states.append('M')
-        else:
-            # This is either a correct negative or false alarm, depending on
-            # whether or not the test value agrees with the truth value
-            if test != event_val:
-                event_states.append('C')
-            else:
-                event_states.append('F')
-
-    event_states = np.array(event_states)
+    # Assign the values
+    event_states[hit_mask] = 'H'
+    event_states[miss_mask] = 'M'
+    event_states[corn_mask] = 'C'
 
     return event_states
 
