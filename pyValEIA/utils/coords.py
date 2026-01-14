@@ -38,7 +38,7 @@ def longitude_to_local_time(longitude, utc_time):
     return local_times
 
 
-def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
+def compute_magnetic_coords(lat, lon, epoch_time, height=0.0, mag_type='qd'):
     """Calculate magnetic coordinates from geodetic coordinates.
 
     Parameters
@@ -49,8 +49,10 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
         Longitudes in degrees East
     epoch_time : dt.datetime
         Universal time for IGRF coefficients
+    height : array-like
+        Altitude in km (default=0.0)
     mag_type : str
-        Magnetic coordinate type (default='qd')
+        Magnetic coordinate type, accepts 'geo', 'qd', and 'geo' (default='qd')
 
     Returns
     -------
@@ -65,14 +67,14 @@ def compute_magnetic_coords(lat, lon, epoch_time, mag_type='qd'):
 
     Notes
     -----
-    `mag_type` inputs are defined in `apexpy`.
+    `mag_type` inputs are defined in `apexpy`. Does not accept 'mlt'.
 
     """
     # Initalize the Apex object
     apex = Apex(date=epoch_time)
 
     # Calculate the quasi-dipole coordinates
-    mlat, mlon = apex.convert(lat, lon, 'geo', mag_type)
+    mlat, mlon = apex.convert(lat, lon, 'geo', mag_type, height=height)
 
     return mlat, mlon
 
@@ -83,7 +85,7 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
     Parameters
     ----------
     lat : array-like
-        latitude array
+        Latitude array in degrees
     Re : float
         Radius of Earth's equator in meters (default=6378137)
     Rp : float
@@ -95,24 +97,15 @@ def earth_radius(lat, Re=6378137, Rp=6356752):
         Earth's radius in meters at given latitudes
 
     """
+    # Convert latitude to raidans
+    lat_rad = np.radians(np.asarray(lat))
 
-    Rearth = []
+    # Caluclate Earth's radius at a specific altitude
+    eq_top = (((Re ** 2 * np.cos(lat_rad)) ** 2)
+              + ((Rp ** 2 * np.sin(lat_rad)) ** 2))
+    eq_bot = (((Re * np.cos(lat_rad)) ** 2) + ((Rp * np.sin(lat_rad)) ** 2))
 
-    # iterate through latitudes
-    for i, l in enumerate(lat):
-        # convert latitude to raidans
-        lat_rad = l * (np.pi / 180)
-
-        # caluclat earth's raidus at a specific altitude
-        eq_top = (((Re ** 2 * np.cos(lat_rad)) ** 2)
-                  + ((Rp ** 2 * np.sin(lat_rad)) ** 2))
-        eq_bot = (((Re * np.cos(lat_rad)) ** 2)
-                  + ((Rp * np.sin(lat_rad)) ** 2))
-
-        # take square root and append
-        Rearth.append((eq_top / eq_bot) ** 0.5)
-
-    # convert to array
-    Rearth = np.array(Rearth)
+    # Take square root of the ratio
+    Rearth = np.sqrt(eq_top / eq_bot)
 
     return Rearth
