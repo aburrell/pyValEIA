@@ -145,7 +145,7 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         # A moving filter window using a median or average is requested.
         # Determine the window size
         window = int(np.round(abs(window_lat / np.median(np.diff(sort_lat)))))
-        measure = filt.split('_', "")[-1]
+        measure = filt.split('_')[-1]
         den_filt2 = filters.rolling_nanmeasure(den_filt1, window, measure)
 
     # Calculate gradient
