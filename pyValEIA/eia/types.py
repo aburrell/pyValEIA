@@ -560,7 +560,7 @@ def single_peak_rules(p1, tec, lat):
     Returns
     -------
     eia_state : str
-        saddle, peak (north, south, (saddle) peak, (saddle) trough)
+        peak (north, south), trough, flat (north, south)
     plats : array-like
         latitude of peak
 
