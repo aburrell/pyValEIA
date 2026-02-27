@@ -140,7 +140,7 @@ def eia_slope_state(z_lat, lat, dens, ghost=True, zero_slope=0.5):
     lat_span = (max(sort_lat) - min(sort_lat))
 
     # Scale the density
-    sort_dens /= max(sort_dens) * lat_span
+    sort_dens = sort_dens / max(sort_dens) * lat_span
 
     # Save original zero-latitude locations
     z_lat_og = np.asarray(z_lat)
