@@ -261,7 +261,7 @@ def eia_slope_state(z_lat, lat, dens, ghost=True, zero_slope=0.5):
                 p1, p2 = detection.zero_max(sort_lat, sort_dens, z_lat_ends,
                                             maxes=[zmaxi])
 
-                if (p2 > 0) & (p1 > 0):
+                if (p2 is not None) & (p1 is not None):
 
                     # 2 peaks found, double peak rules
                     eia_state, plats = double_peak_rules(
