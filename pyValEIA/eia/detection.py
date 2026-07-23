@@ -1001,7 +1001,7 @@ def zero_max(lat, dens, zlats, maxes=None):
             p1 = maxes[0][0]
     else:
         # No current maxes, use a sinlge max
-        if (p1 < 0) & (p2 < 0):
+        if (p1 is None) & (p2 is None):
             t_last = densz.argmax()
             p1 = abs(lat - latz[t_last]).argmin()
 
