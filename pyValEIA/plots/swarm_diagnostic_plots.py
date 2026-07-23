@@ -690,6 +690,12 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
                     # look at day before if available.
                     sw_new = io.load.load_swarm(sday - dt.timedelta(days=1),
                                                 sday, sata, swarm_file_dir)
+
+                    if sw_new.empty:
+                        logger.warning('No data loaded for {:} from {:}'.format(
+                            sday, swarm_file_dir))
+                        continue
+
                     sw_new['LT_hr'] = (sw_new['LT'].dt.hour
                                        + sw['LT'].dt.minute / 60
                                        + sw['LT'].dt.second / 3600)
