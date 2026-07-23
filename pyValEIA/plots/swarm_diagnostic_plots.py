@@ -489,7 +489,7 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
                         lon_var='lon', lat_var='lat', alt_var='alt',
                         hr_var='hour', min_var='minute', tec_var='tec',
                         hmf2_var='hmf2', nmf2_var='nmf2', mod_cadence=15,
-                        max_tdif=15, offset=0):
+                        max_tdif=15, offset=0, swarm_ne_flag_max=20):
     """Plot Swarm and model data for 1 day and create file of EIA info.
 
     Parameters
@@ -567,6 +567,9 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
     offset : int
         Number of days to offset Swarm data from model data to test the model
         reliability (default=0)
+    swarm_ne_flag_max : int
+        Maximum value of the Swarm electron density flag to accept for clean
+        data (default=20)
 
     Returns
     -------
@@ -767,23 +770,34 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
             # Level-1b-Product-Definition-Specification.pdf/12995649-fbcb-6ae2-
             # 5302-2269fecf5a08
             # Navigate to page 52 Table 6-4
-            swarm_check.loc[(swarm_check['Ne_flag'] > 20), 'Ne'] = np.nan
+            swarm_check.loc[(swarm_check['Ne_flag'] > swarm_ne_flag_max),
+                            'Ne'] = np.nan
 
-            # ------------Swarm EIA STATE ------------------------------------
-            slat = swarm_check['Mag_Lat'].values
-            density = swarm_check['Ne'].values
-            den_str = 'Ne'
-            slat_new, sw_filt, eia_type_slope, z_lat, plats, p3 = eia_complete(
-                slat, density, den_str, filt=swarm_filt,
-                interpolate=swarm_interpolate, barrel_envelope=swarm_envelope,
-                barrel_radius=swarm_barrel, window_lat=swarm_window)
-            df.at[f, 'Swarm_EIA_Type'] = eia_type_slope
+            if np.isfinite(swarm_check['Ne']).any():
+                # Determine the Swarm EIA state
+                slat = swarm_check['Mag_Lat'].values
+                density = swarm_check['Ne'].values
+                den_str = 'Ne'
+                (slat_new, sw_filt, eia_type_slope, z_lat, plats,
+                 p3) = eia_complete(
+                     slat, density, den_str, filt=swarm_filt,
+                     interpolate=swarm_interpolate,
+                     barrel_envelope=swarm_envelope,
+                     barrel_radius=swarm_barrel, window_lat=swarm_window)
+                df.at[f, 'Swarm_EIA_Type'] = eia_type_slope
 
-            # Give user a heads up for an unknown type
-            if eia_type_slope == 'unknown':
-                logger.info(' '.join(['Swarm type unknown for Sat', sata, 'at',
+                # Give user a heads up for an unknown type
+                if eia_type_slope == 'unknown':
+                    logger.info(' '.join([
+                        'Swarm type unknown for Sat', sata, 'at',
+                        swarm_check['Time'].iloc[-1].strftime(
+                            '%Y/%m/%d %H:%M')]))
+            else:
+                # Give user a heads up for lack of data
+                logger.info(' '.join(['No good Swarm Ne for Sat', sata, 'at',
                                       swarm_check['Time'].iloc[-1].strftime(
                                           '%Y/%m/%d %H:%M')]))
+                continue
 
             # If user specified fig_on is True, create a figure
             if fig_on:
