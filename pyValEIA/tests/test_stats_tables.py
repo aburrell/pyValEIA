@@ -4,7 +4,6 @@
 # -----------------------------------------------------------------------------
 """Tests for functions in `utils.stats.tables`."""
 
-import pandas as pd
 import unittest
 
 from pyValEIA.stats import tables
