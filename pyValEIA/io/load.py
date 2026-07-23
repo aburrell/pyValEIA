@@ -125,10 +125,10 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     """
     # Test the input after assigning variables where first variable is the
     # time stamp, the second variable is geodetic latitude, and the third
-    # variable is geographic longitude
-    variables = {'LP': ["Timestamp", "Latitude", "Longitude", "Ne", "Ne_error",
-                        "Te", "Te_error", "Flags_Ne", "Flags_Te", "Flags_LP",
-                        "Radius"]}
+    # variable is geographic longitude. These may change in the future.
+    variables = {'LP': ["Timestamp", "Latitude", "Longitude", "N_elec",
+                        "N_elec_error", "T_elec", "T_elec_error",
+                        "Flags_N_elec", "Flags_T_elec", "Flags_LP", "Radius"]}
 
     if dataset not in variables.keys():
         raise ValueError('unknown Swarm dataset.')
@@ -137,8 +137,11 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     lat_var = variables[dataset][1]
     lon_var = variables[dataset][2]
 
-    # Set variables to be renamed
-    rename = {'LP': {'Flags_Ne': 'Ne_flag', 'Flags_Te': 'Te_flag',
+    # Set variables to be renamed. These were the variable names at the time
+    # this code was developed, several Swarm file versions in the past
+    rename = {'LP': {'Flags_N_elec': 'Ne_flag', 'N_elec': 'Ne',
+                     'N_elec_error': 'Ne_error', 'Flags_T_elec': 'Te_flag',
+                     'T_elec': 'Te', 'T_elec_error': 'Te_error',
                      'Flags_LP': 'LP_flag', 'Radius': 'Altitude'}}
 
     # Initalize the output
