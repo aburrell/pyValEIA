@@ -6,7 +6,7 @@
 
 import unittest
 
-from pyValEIA.stats import tables
+# from pyValEIA.stats import tables
 
 
 class TestTablesFuncs(unittest.TestCase):
