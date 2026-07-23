@@ -4,7 +4,6 @@
 # -----------------------------------------------------------------------------
 """Tests for functions in `utils.stats.tables`."""
 
-import numpy as np
 import pandas as pd
 import unittest
 

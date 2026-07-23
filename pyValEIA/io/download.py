@@ -79,8 +79,8 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
     """
     # Create the URL without the filename based on the data level
     full_url = ''.join([base_url, "?do=download&file=swarm%2FLevel", level,
-                            "%2F", baseline, "%2F", instrument,
-                            'x_' if level == '1b' else '%2F', dataset])
+                        "%2F", baseline, "%2F", instrument,
+                        'x_' if level == '1b' else '%2F', dataset])
 
     # Create the output folder
     out_folder = os.path.join(out_dir, instrument, '_'.join(['Sat', satellite]),
