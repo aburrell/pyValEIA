@@ -99,6 +99,7 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         x_new = np.linspace(min(sort_lat), max(sort_lat),
                             interpolate * len(sort_lat))
         sort_density = np.interp(x_new, sort_lat, sort_density)
+        sort_lat = np.array(x_new)
 
     # Perform the first round of smoothing
     if filt[:6] == 'barrel':
