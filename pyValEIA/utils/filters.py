@@ -123,7 +123,7 @@ def simple_barrel_roll(xvar, yvar, barrel_radius, envelope=True,
 
         # Check to see if there are NaN values left in the output
         nan_mask = np.isnan(yvar_det)
-        if sum(nan_mask):
+        if sum(nan_mask) > 0 and sum(~nan_mask) > 0:
             yvar_det[nan_mask] = np.interp(xvar[nan_mask], xvar[~nan_mask],
                                            yvar_det[~nan_mask])
     else:
