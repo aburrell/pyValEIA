@@ -223,11 +223,11 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
         if dataset in rename.keys():
             swarm_data = swarm_data.rename(columns=rename[dataset])
 
-    # Check that electron density and its flag are correctly labeled in the
-    # data
-    if not np.all([ne_var in swarm_data.columns for ne_var in
-                   ['Ne', 'Ne_error', 'Ne_flag']]):
-        raise ValueError('unknown data format for {:}'.format(filename))
+        # Check that electron density and its flag are correctly labeled in
+        # the data
+        if not np.all([ne_var in swarm_data.columns for ne_var in
+                       ['Ne', 'Ne_error', 'Ne_flag']]):
+            raise ValueError('unknown data format for {:}'.format(filename))
 
     return swarm_data
 
