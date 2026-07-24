@@ -87,7 +87,7 @@ def extract_cdf_time(cdf_data, time_var='Timestamp'):
 
 
 def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
-               dataset='LP', f_end='0602'):
+               dataset='LP', f_end='0702'):
     """Load Swarm data, downloading any missing files.
 
     Parameters
@@ -108,9 +108,9 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
         (default='LP')
     f_end : str
         For different data products there are different numbers at the end
-        The most common for EFIxLP is '0602' where '0602' represents
+        The most common for EFIxLP is '0702' where '0702' represents
         the file version. Other datasets may also have a string that represents
-        the record type (default='0602')
+        the record type (default='0702')
 
     Returns
     -------
@@ -120,7 +120,14 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     Raises
     ------
     ValueError
-        If an unknown dataset is requested (currently only supports 'LP')
+        If an unknown dataset is requested (currently only supports 'LP') or
+        an older format is loaded
+
+    Notes
+    -----
+    The Swarm data team will change variable names and flag interpretations
+    between versions.  Currently this code only supports version 07XX data.
+    
 
     """
     # Test the input after assigning variables where first variable is the
@@ -215,6 +222,12 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
         if dataset in rename.keys():
             swarm_data = swarm_data.rename(columns=rename[dataset])
+
+    # Check that electron density and its flag are correctly labeled in the
+    # data
+    if not np.all([ne_var in swarm_data.columns for ne_var in
+                   ['Ne', 'Ne_error', 'Ne_flag']]):
+        raise ValueError('unknown data format for {:}'.format(filename))
 
     return swarm_data
 
