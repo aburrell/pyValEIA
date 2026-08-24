@@ -39,7 +39,8 @@ jobs:
       if: ${{ matrix.test_config != 'NEP29' && matrix.os == 'macos-latest' }}
       run:  |
           brew reinstall gcc@15
-          CC=/opt/homebrew/bin/gcc-15 pip install --upgrade-strategy only-if-needed .[test]
+	  ls /opt/homebrew/bin/gfortran*
+          CC=/opt/homebrew/bin/gcc-15 FC=/opt/homebrew/bin/gfortran pip install --upgrade-strategy only-if-needed .[test]
 
     - name: Install NEP29 dependencies
       if: ${{ matrix.test_config == 'NEP29'}}
