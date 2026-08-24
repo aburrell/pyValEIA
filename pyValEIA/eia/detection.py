@@ -995,7 +995,7 @@ def zero_max(lat, dens, zlats, maxes=None):
                 p2 = abs(lat - latz_north[tn]).argmin()
 
     if maxes is not None and len(maxes) > 0:
-        # If one peak is given, replace either p1 (souther) or p2 (northern)
+        # If one peak is given, replace either p1 (southern) or p2 (northern)
         if lat[maxes[0]] > 0:
             p2 = maxes[0][0]
         elif lat[maxes[0]] < 0:
