@@ -255,11 +255,15 @@ def mad_conjunction(mod_dc, mlat_val, lon_val, stime, max_tdif=20, mad_tres=5,
         mlon = mlon[lon_mask]
         glat = lat_grid[lon_mask]
 
-    # Model COINCIDENCE
+    # Model COINCIDENCE selection
     mod_tec_lat_all = mod_dc['tec'][n_t, lon_mask]
 
+    # Mask data to the desired magnetic latitude range and order by
+    # magnetic latitude
     mlat1 = -1 * abs(mlat_val)
     mlat2 = abs(mlat_val)
+    lat_mask = (mlat >= mlat1) & (mlat <= mlat2)
+    isort = np.argsort(mlat[lat_mask])
 
     mod_tec_return = mod_tec_lat_all[(mlat >= mlat1) & (mlat <= mlat2)]
     time_ls = [mod_time for i in range(len(mod_tec_return))]
@@ -267,10 +271,11 @@ def mad_conjunction(mod_dc, mlat_val, lon_val, stime, max_tdif=20, mad_tres=5,
     mod_df = pd.DataFrame()
     mod_df['Time'] = time_ls
     mod_df['tec'] = mod_tec_return
-    mod_df['Mag_Lat'] = mlat[(mlat >= mlat1) & (mlat <= mlat2)]
-    mod_df['Mag_Lon'] = mlon[(mlat >= mlat1) & (mlat <= mlat2)]
-    mod_df['Longitude'] = np.ones(len(mod_tec_return)) * mod_lon_ch[0]
-    mod_df['Latitude'] = glat[(mlat >= mlat1) & (mlat <= mlat2)]
+    mod_df['Mag_Lat'] = mlat[lat_mask][isort]
+    mod_df['Mag_Lon'] = mlon[lat_mask][isort]
+    mod_df['Longitude'] = np.full(shape=mod_tec_return.shape,
+                                  fill_value=mod_lon_ch[0])
+    mod_df['Latitude'] = glat[lat_mask][isort]
 
     mod_map = {'tec': mod_dc['tec'][n_t, :, :], 'glon': mod_dc['glon'],
                'glat': mod_dc['glat']}
