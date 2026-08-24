@@ -7,7 +7,7 @@
 """Functions for plotting Madrigal TEC data and evaluating EIA detection."""
 
 import datetime as dt
-import matplotlib.gridspec as gridspec
+from  matplotlib import gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -229,7 +229,7 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
         mad_tec_meas = np.array(mad_tec_meas)
         mad_std_meas = np.array(mad_std_meas)
 
-        # remove outliers and clean data
+        # Remove outliers and clean data
         mad_tec_meas, mad_std_meas, nan_perc, mlat_val = mad_tec_clean(
             mad_tec_meas, mad_std_meas, mad_mlat, mlat_val)
 
@@ -264,7 +264,6 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
 
         mad_df = pd.DataFrame()
         if (nan_perc < max_nan):
-
             # make plots
             ax = fig.add_subplot(4, 3, j)
             ax.plot(mad_mlat[abs(mad_mlat) < mlat_val], mad_tec_meas)
@@ -294,7 +293,7 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
                 lat_use = mad_df["Mag_Lat"].values
                 den_mad = mad_df["tec"].values
 
-                # TODO: add kwarg options to figure input.
+                # TODO(#15): add kwarg options to figure input.
                 (mad_lats, mad_filt, eia_type_slope, z_loc, plats,
                  p3) = eia_complete(lat_use, den_mad, 'tec', filt=filt,
                                     interpolate=2, barrel_envelope=False,
@@ -354,8 +353,8 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
     mlat_val: int
         magnetic latitude cutoff (default=30)
     lon_start : int
-        longitude of desired region, e.g., -90 will span -90 to -30 degrees
-        (default=-90)
+        magnetic longitude of desired region, e.g., -90 will span -90 to -30
+        degrees (default=-90)
     file_save_dir : str
         directory to save file to (default='')
     fig_on: bool
@@ -425,11 +424,11 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
     """
     # Initialize column names
     col_mod_name = model_name.capitalize()
-    columns = ['Mad_Time_Start', 'Mad_MLat', 'Mad_GLon_Start',
+    columns = ['Mad_Time_Start', 'Mad_MLat', 'Mad_MLon_Start',
                'Mad_GLat_Start', 'LT_Hour', 'Mad_Nan_Percent',
                'Mad_EIA_Type', 'Mad_Peak_MLat1', 'Mad_Peak_TEC1',
                'Mad_Peak_MLat2', 'Mad_Peak_TEC2', 'Mad_Peak_MLat3',
-               'Mad_Peak_TEC3', f'{col_mod_name}_Time', f'{col_mod_name}_GLon',
+               'Mad_Peak_TEC3', f'{col_mod_name}_Time', f'{col_mod_name}_MLon',
                f'{col_mod_name}_Min_MLat', f'{col_mod_name}_Max_MLat',
                f'{col_mod_name}_Type', f'{col_mod_name}_Peak_MLat1',
                f'{col_mod_name}_Peak_TEC1', f'{col_mod_name}_Peak_MLat2',
@@ -438,26 +437,38 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                f'{col_mod_name}_Third_Peak_TEC1']
     df = pd.DataFrame(columns=columns)
     sday = start_day.replace(hour=0, minute=0, second=0, microsecond=0)
-    mad_dc = io.load_madrigal(sday, mad_file_dir)
+    mad_dc = io.load.load_madrigal(sday, mad_file_dir)
 
     # Load the model data
     mod_dc = mod_load_func(
-        start_day, fdir=mod_file_dir, name_format=mod_name_format,
+        start_day, mod_file_dir, name_format=mod_name_format,
         ne_var=ne_var, lon_var=lon_var, lat_var=lat_var, alt_var=alt_var,
         hr_var=hr_var, min_var=min_var, tec_var=tec_var, hmf2_var=hmf2_var,
         nmf2_var=nmf2_var, time_cadence=mod_cadence)
 
     f = -1
     mlat_val_og = mlat_val
+
+    # Get the magnetic coordinates for the TEC data.  Magnetic coefficeints
+    # will not change over the course of the day, so just use the first time
+    lon_grid, lat_grid = np.meshgrid(mad_dc['glon'], mad_dc['glat'])
+    mad_mlat, mad_mlon = coords.compute_magnetic_coords(lat_grid, lon_grid,
+                                                        mad_dc['time'][0])
+
+    # TODO(#44): Switch from a hard-coded range to cycling through file times
     for m in range(96):
         m_t = m * 3  # time range 5 minute cadence, 15 minute windows
         stime = sday + dt.timedelta(minutes=5 * m_t)
         mt = np.where(stime == mad_dc['time'])[0][0]
         j = 2
         panel1 = 0
+
+        # If desired, initialize a figure
         if fig_on:
             fig = plt.figure(figsize=(25, 24))
             plt.rcParams.update({'font.size': fosi})
+
+        # Cycle through 12 different longitude bins that are 5 degrees wide
         for i in range(12):
             mlat_val = mlat_val_og
 
@@ -465,48 +476,36 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
             lon_min = lon_start + 5 * i
             lon_max = lon_start + 5 * (i + 1)
 
-            # compute magnetic latitude
-            mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
-            mad_mlat, mad_mlon = coords.compute_magnetic_coords(
-                mad_dc['glat'], mad_lon_ls, mad_dc['time'][mt])
-
-            # tec and dtec values by time
+            # Extract the TEC and dTEC values by time
             mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
             mad_dtec_T = mad_dc['dtec'][mt:mt + 3, :, :]
 
-            # by longitude
-            mad_tec_lon = mad_tec_T[:, :, ((mad_dc['glon'] >= lon_min)
-                                           & (mad_dc['glon'] < lon_max))]
-            mad_dtec_lon = mad_dtec_T[:, :, ((mad_dc['glon'] >= lon_min)
-                                             & (mad_dc['glon'] < lon_max))]
+            # Select by magnetic longitude, which masks over geographic
+            # latitude and longitude
+            lon_mask = (mad_mlon >= lon_min) & (mad_mlon < lon_max)
+            mad_lat = mad_mlat[lon_mask]
+            mad_tec_lon = mad_tec_T[:, lon_mask]
+            mad_dtec_lon = mad_dtec_T[:, lon_mask]
             mad_tec_lon[mad_dtec_lon > 2] = np.nan
             mad_dtec_lon[mad_dtec_lon > 2] = np.nan
 
-            # calculate the mean of all tec values and
-            # pick out the largest dtec value, for all latitudes
-            mad_tec_meas = []
-            mad_std_meas = []
-            for r in range(np.shape(mad_tec_lon)[1]):
-                rr = np.array(mad_tec_lon[:, r, :])
-                if not np.all(np.isnan(rr)):
-                    mad_tec_meas.append(np.nanmean(rr))  # Calculate mean
-                    mad_std_meas.append(np.nanstd(rr))  # Calculate stdev
-                else:
-                    mad_tec_meas.append(np.nan)
-                    mad_std_meas.append(np.nan)
-            mad_tec_meas = np.array(mad_tec_meas)
-            mad_std_meas = np.array(mad_std_meas)
+            # Calculate the mean and standard deviation of all TEC values
+            # for each latitude
+            mad_tec_meas = np.nanmean(mad_tec_lon, axis=0)
+            mad_std_meas = np.nanstd(mad_tec_lon, axis=0)
 
-            # remove outliers and clean data
+            # Remove outliers and clean data
             mad_tec_meas, mad_std_meas, nan_perc, mlat_val = mad_tec_clean(
-                mad_tec_meas, mad_std_meas, mad_mlat, mlat_val,
+                mad_tec_meas, mad_std_meas, mad_lat, mlat_val,
                 max_nan=max_nan)
+            lat_mask = abs(mad_lat) < mlat_val
 
-            # get nimo and conjunction
-            glon_val = (lon_max + lon_min) / 2
+            # Get model data and the conjunction
+            mlon_val = (lon_max + lon_min) / 2
             try:
                 mod_df, mod_map = conjunctions.mad_conjunction(
-                    mod_dc, mlat_val, glon_val, stime, max_tdif=max_tdif)
+                    mod_dc, mlat_val, mlon_val, stime, max_tdif=max_tdif,
+                    lon_type='mag')
             except ValueError:
                 logger.info('no Madrigal/model conjunction at this time')
                 continue
@@ -514,15 +513,15 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
             # Create madrigal dataframe
             mad_df = pd.DataFrame()
             mad_df["tec"] = mad_tec_meas
-            mad_df["Mag_Lat"] = mad_mlat[abs(mad_mlat) < mlat_val]
-            mad_df["GLat"] = mad_dc['glat'][abs(mad_mlat) < mlat_val]
+            mad_df["Mag_Lat"] = mad_lat[lat_mask]
+            mad_df["GLat"] = lat_grid[lon_mask][lat_mask]
             if (nan_perc < 20):
                 f += 1
                 df.at[f, 'Mad_Time_Start'] = mad_dc['time'][mt].strftime(
                     '%Y/%m/%d_%H:%M:%S.%f')
 
                 df.at[f, 'Mad_MLat'] = abs(mlat_val)
-                df.at[f, 'Mad_GLon_Start'] = lon_min
+                df.at[f, 'Mad_MLon_Start'] = lon_min
                 df.at[f, 'Mad_GLat_Start'] = max(mad_df["GLat"])
 
                 # calculate Local Time
@@ -536,17 +535,17 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                 if fig_on:
                     if panel1 == 0:  # Use first panel for legend
                         ax = fig.add_subplot(4, 3, 1)
-                        ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
+                        ax.plot(mad_lat[lat_mask],
                                 mad_tec_meas, linestyle='-.',
                                 label='Madrigal TEC')
-                        ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
+                        ax.plot(mad_lat[lat_mask],
                                 mad_tec_meas, color='orange',
                                 label='Madrigal Barrel Average')
-                        ax.fill_between(mad_mlat[abs(mad_mlat) < mlat_val],
+                        ax.fill_between(mad_lat[lat_mask],
                                         mad_tec_meas - mad_std_meas,
                                         mad_tec_meas + mad_std_meas,
                                         color='g', alpha=0.2, label='stdev')
-                        ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
+                        ax.plot(mad_lat[lat_mask],
                                 mad_tec_meas, linestyle='--', color='k',
                                 label='NIMO TEC')
                         ax.set_ylim([-99, -89])
@@ -559,7 +558,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                         ax.axis('off')
                         panel1 = 1
 
-                # Get nimo eia_type ------------------------------------------
+                # Get Model eia_type ------------------------------------------
                 nlat = mod_df['Mag_Lat'].values
                 nden = mod_df['tec'].values
 
@@ -573,7 +572,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                 df.at[f, f'{col_mod_name}_Time'] = mod_df["Time"].iloc[0][
                     0].strftime('%Y/%m/%d_%H:%M:%S.%f')
 
-                df.at[f, f'{col_mod_name}_GLon'] = mod_df["Longitude"].iloc[0]
+                df.at[f, f'{col_mod_name}_MLon'] = mod_df["Longitude"].iloc[0]
                 df.at[f, f'{col_mod_name}_Min_MLat'] = min(mod_df["Mag_Lat"])
                 df.at[f, f'{col_mod_name}_Max_MLat'] = max(mod_df["Mag_Lat"])
                 df.at[f, f'{col_mod_name}_Type'] = eia_type_slope
@@ -597,10 +596,10 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
 
                 if fig_on:
                     ax = fig.add_subplot(4, 3, j)
-                    ax.plot(mad_mlat[abs(mad_mlat) < mlat_val], mad_tec_meas)
-                    ax.scatter(mad_mlat[abs(mad_mlat) < mlat_val],
+                    ax.plot(mad_lat[lat_mask], mad_tec_meas)
+                    ax.scatter(mad_lat[lat_mask],
                                mad_tec_meas)
-                    ax.fill_between(mad_mlat[abs(mad_mlat) < mlat_val],
+                    ax.fill_between(mad_lat[lat_mask],
                                     mad_tec_meas - mad_std_meas,
                                     mad_tec_meas + mad_std_meas, color='g',
                                     alpha=0.2)
