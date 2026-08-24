@@ -144,7 +144,8 @@ def madrigal_model_world_maps(stime, mad_dc, mod_map):
 
 
 def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
-                          model_name='NIMO', max_nan=20, fosi=14):
+                          model_name='NIMO', max_nan=20, fosi=14,
+                          lon_type='geo'):
     """Create one Madrigal TEC vs model data plot.
 
     Parameters
@@ -165,6 +166,9 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
         Maximum acceptable percent nan values in a pass (default=20)
     fosi : int
         font size (default=14)
+    lon_type : str
+        Specify whether to select by geographic, 'geo', or magnetic, 'mag',
+        longitude (default='geo')
 
     Returns
     -------
@@ -198,58 +202,54 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
         lon_max = lon_start + 5 * (i + 1)
 
         # compute magnetic latitude
-        mad_lon_ls = np.ones(len(mad_dc['glat'])) * (lon_min + lon_max) / 2
+        lon_grid, lat_grid = np.meshgrid(mad_dc['glon'], mad_dc['glat'])
         mad_mlat, mad_mlon = coords.compute_magnetic_coords(
-            mad_dc['glat'], mad_lon_ls, mad_dc['time'][mt])
+            lat_grid, lon_grid, mad_dc['time'][mt])
 
-        # tec and dtec values by time
+        
+        # Select by magnetic or geographic longitude, but use the whole
+        # grid because magnetic longitude masks over a range of geographic
+        # latitudes and longitudes
+        if lon_type.lower() == 'mag':
+            lon_mask = (mad_mlon >= lon_min) & (mad_mlon < lon_max)
+        else:
+            lon_mask = (lon_grid >= lon_min) & (lon_grid < lon_max)
+
+        # Extract the mag lat, TEC, and dTEC values by time and longitude
+        mad_lat = mad_mlat[lon_mask]
         mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
         mad_dtec_T = mad_dc['dtec'][mt:mt + 3, :, :]
-
-        # by longitude
-        mad_tec_lon = mad_tec_T[:, :, ((mad_dc['glon'] >= lon_min)
-                                       & (mad_dc['glon'] < lon_max))]
-        mad_dtec_lon = mad_dtec_T[:, :, ((mad_dc['glon'] >= lon_min)
-                                         & (mad_dc['glon'] < lon_max))]
+        mad_tec_lon = mad_tec_T[:, lon_mask]
+        mad_dtec_lon = mad_dtec_T[:, lon_mask]
         mad_tec_lon[mad_dtec_lon > 2] = np.nan
         mad_dtec_lon[mad_dtec_lon > 2] = np.nan
 
-        # calculate the mean of all tec values and
-        # pick out the largest dtec value, for all latitudes
-        mad_tec_meas = []
-        mad_std_meas = []
-        for r in range(np.shape(mad_tec_lon)[1]):
-            rr = np.array(mad_tec_lon[:, r, :])
-            if not np.all(np.isnan(rr)):
-                mad_tec_meas.append(np.nanmean(rr))
-                mad_std_meas.append(np.nanstd(rr))
-            else:
-                mad_tec_meas.append(np.nan)
-                mad_std_meas.append(np.nan)
-        mad_tec_meas = np.array(mad_tec_meas)
-        mad_std_meas = np.array(mad_std_meas)
+        # calculate the mean and standard deviation of all TEC values
+        mad_tec_meas = np.nanmean(mad_tec_lon, axis=0)
+        mad_std_meas = np.nanstd(mad_tec_lon, axis=0)
 
         # Remove outliers and clean data
         mad_tec_meas, mad_std_meas, nan_perc, mlat_val = mad_tec_clean(
-            mad_tec_meas, mad_std_meas, mad_mlat, mlat_val)
+            mad_tec_meas, mad_std_meas, mad_lat, mlat_val)
+        lat_mask = abs(mad_lat) < mlat_val
+        isort = np.argsort(mad_lat[lat_mask])
 
         # get nimo data ------------------------------------------------
-        glon_val = (lon_max + lon_min) / 2
+        lon_val = (lon_max + lon_min) / 2
         mod_df, mod_map = conjunctions.mad_conjunction(
-            mod_dc, mlat_val, glon_val, stime)
+            mod_dc, mlat_val, lon_val, stime, lon_type=lon_type)
 
         # Add legend as first panel
         if i == 0:
             ax = fig.add_subplot(4, 3, 1)
-            ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
-                    mad_tec_meas, linestyle='-.', label='Madrigal TEC')
-            ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
-                    mad_tec_meas, color='orange',
-                    label='Madrigal Barrel Average')
-            ax.fill_between(mad_mlat[abs(mad_mlat) < mlat_val],
-                            mad_tec_meas - mad_std_meas,
-                            mad_tec_meas + mad_std_meas, color='g', alpha=0.2,
-                            label='Tec +/- dTec')
+            ax.plot(mad_lat[lat_mask][isort], mad_tec_meas[isort],
+                    linestyle='-.', label='Madrigal TEC')
+            ax.plot(mad_lat[lat_mask][isort], mad_tec_meas[isort],
+                    color='orange', label='Madrigal Barrel Average')
+            ax.fill_between(mad_lat[lat_mask][isort],
+                            mad_tec_meas[isort] - mad_std_meas[isort],
+                            mad_tec_meas[isort] + mad_std_meas[isort],
+                            color='g', alpha=0.2, label='TEC +/- dTEC')
             ax.plot(mad_mlat[abs(mad_mlat) < mlat_val],
                     mad_tec_meas, linestyle='--', color='k',
                     label='{:s} TEC'.format(model_name))
@@ -264,20 +264,18 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
 
         mad_df = pd.DataFrame()
         if (nan_perc < max_nan):
-            # make plots
+            # Make plots
             ax = fig.add_subplot(4, 3, j)
-            ax.plot(mad_mlat[abs(mad_mlat) < mlat_val], mad_tec_meas)
-            ax.scatter(mad_mlat[abs(mad_mlat) < mlat_val], mad_tec_meas)
-            ax.fill_between(mad_mlat[abs(mad_mlat) < mlat_val],
-                            mad_tec_meas - mad_std_meas,
-                            mad_tec_meas + mad_std_meas, color='g', alpha=0.2,
-                            label=None)
+            ax.plot(mad_lat[lat_mask][isort], mad_tec_meas[isort])
+            ax.scatter(mad_lat[lat_mask][isort], mad_tec_meas[isort])
+            ax.fill_between(mad_lat[lat_mask][isort],
+                            mad_tec_meas[isort] - mad_std_meas[isort],
+                            mad_tec_meas[isort] + mad_std_meas[isort],
+                            color='g', alpha=0.2, label=None)
 
-            nlat = mod_df['Mag_Lat'].values
-            nden = mod_df['tec'].values
             (mod_lat, mod_filt, eia_type_slope, z_lat, plats,
-             p3) = eia_complete(nlat, nden, 'tec', interpolate=2,
-                                barrel_envelope=False)
+             p3) = eia_complete(mod_df['Mag_Lat'].values, mod_df['tec'].values,
+                                'tec', interpolate=2, barrel_envelope=False)
 
             ax.plot(mod_df['Mag_Lat'], mod_df['tec'], linestyle='--',
                     color='k', label=eia_type_slope)
@@ -307,7 +305,8 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
                               ymin=min(mad_df["tec"]),
                               ymax=mad_df["tec"].iloc[lat_loc],
                               alpha=0.5, color='black')
-                ax.set_title(str(lon_min) + ' to ' + str(lon_max) + ' GeoLon')
+                ax.set_title(str(lon_min) + ' to ' + str(lon_max) + " "
+                             + lon_type.capitalize() + 'Lon')
                 ax.set_xlim([-mlat_val, mlat_val])
             j = j + 1
         ax.legend()
@@ -323,16 +322,16 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
 
 def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                          model_name='NIMO', mod_load_func=io.load.load_nimo,
-                         mlat_val=30, lon_start=-90, file_save_dir='',
-                         fig_on=True, fig_save_dir='', max_nan=20,
-                         mad_filt='barrel_average', mad_interpolate=2,
-                         mad_envelope=False, mad_barrel=3, mad_window=3,
-                         mod_filt='', mod_interpolate=2, mod_envelope=False,
-                         mod_barrel=3, mod_window=3, fosi=15, ne_var='dene',
-                         lon_var='lon', lat_var='lat', alt_var='alt',
-                         hr_var='hour', min_var='minute', tec_var='tec',
-                         hmf2_var='hmf2', nmf2_var='nmf2', mod_cadence=15,
-                         max_tdif=20):
+                         mlat_val=30, lon_start=-90, lon_type='geo',
+                         file_save_dir='', fig_on=True, fig_save_dir='',
+                         max_nan=20, mad_filt='barrel_average',
+                         mad_interpolate=2, mad_envelope=False, mad_barrel=3,
+                         mad_window=3, mod_filt='', mod_interpolate=2,
+                         mod_envelope=False, mod_barrel=3, mod_window=3,
+                         fosi=15, ne_var='dene', lon_var='lon', lat_var='lat',
+                         alt_var='alt', hr_var='hour', min_var='minute',
+                         tec_var='tec', hmf2_var='hmf2', nmf2_var='nmf2',
+                         mod_cadence=15, max_tdif=20):
     """Create daily files for Madrigal/model and daily plots.
 
     Parameters
@@ -355,6 +354,9 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
     lon_start : int
         magnetic longitude of desired region, e.g., -90 will span -90 to -30
         degrees (default=-90)
+    lon_type : str
+        Specify whether to select by geographic, 'geo', or magnetic, 'mag',
+        longitude (default='geo')
     file_save_dir : str
         directory to save file to (default='')
     fig_on: bool
@@ -424,7 +426,8 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
     """
     # Initialize column names
     col_mod_name = model_name.capitalize()
-    columns = ['Mad_Time_Start', 'Mad_MLat', 'Mad_MLon_Start',
+    columns = ['Mad_Time_Start', 'Mad_MLat',
+               'Mad_{:s}Lon_Start'.format(lon_type[0].upper()),
                'Mad_GLat_Start', 'LT_Hour', 'Mad_Nan_Percent',
                'Mad_EIA_Type', 'Mad_Peak_MLat1', 'Mad_Peak_TEC1',
                'Mad_Peak_MLat2', 'Mad_Peak_TEC2', 'Mad_Peak_MLat3',
@@ -476,14 +479,20 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
             lon_min = lon_start + 5 * i
             lon_max = lon_start + 5 * (i + 1)
 
-            # Extract the TEC and dTEC values by time
+            # Select by magnetic or geographic longitude, but use the whole
+            # grid because magnetic longitude masks over a range of geographic
+            # latitudes and longitudes
+            if lon_type.lower() == 'mag':
+                lon_mask = (mad_mlon >= lon_min) & (mad_mlon < lon_max)
+                glon_min = np.mean(lon_grid[lon_mask])  # Get most rep GLon
+            else:
+                lon_mask = (lon_grid >= lon_min) & (lon_grid < lon_max)
+                glon_min = lon_min
+
+            # Extract the mag lat, TEC, and dTEC values by time and longitude
+            mad_lat = mad_mlat[lon_mask]
             mad_tec_T = mad_dc['tec'][mt:mt + 3, :, :]
             mad_dtec_T = mad_dc['dtec'][mt:mt + 3, :, :]
-
-            # Select by magnetic longitude, which masks over geographic
-            # latitude and longitude
-            lon_mask = (mad_mlon >= lon_min) & (mad_mlon < lon_max)
-            mad_lat = mad_mlat[lon_mask]
             mad_tec_lon = mad_tec_T[:, lon_mask]
             mad_dtec_lon = mad_dtec_T[:, lon_mask]
             mad_tec_lon[mad_dtec_lon > 2] = np.nan
@@ -499,55 +508,58 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                 mad_tec_meas, mad_std_meas, mad_lat, mlat_val,
                 max_nan=max_nan)
             lat_mask = abs(mad_lat) < mlat_val
+            isort = np.argsort(mad_lat[lat_mask])
 
             # Get model data and the conjunction
-            mlon_val = (lon_max + lon_min) / 2
+            lon_val = (lon_max + lon_min) / 2
             try:
                 mod_df, mod_map = conjunctions.mad_conjunction(
-                    mod_dc, mlat_val, mlon_val, stime, max_tdif=max_tdif,
-                    lon_type='mag')
+                    mod_dc, mlat_val, lon_val, stime, max_tdif=max_tdif,
+                    lon_type=lon_type)
             except ValueError:
                 logger.info('no Madrigal/model conjunction at this time')
                 continue
 
             # Create madrigal dataframe
             mad_df = pd.DataFrame()
-            mad_df["tec"] = mad_tec_meas
-            mad_df["Mag_Lat"] = mad_lat[lat_mask]
-            mad_df["GLat"] = lat_grid[lon_mask][lat_mask]
+            mad_df["tec"] = mad_tec_meas[isort]
+            mad_df["Mag_Lat"] = mad_lat[lat_mask][isort]
+            mad_df["GLat"] = lat_grid[lon_mask][lat_mask][isort]
             if (nan_perc < 20):
                 f += 1
                 df.at[f, 'Mad_Time_Start'] = mad_dc['time'][mt].strftime(
                     '%Y/%m/%d_%H:%M:%S.%f')
 
                 df.at[f, 'Mad_MLat'] = abs(mlat_val)
-                df.at[f, 'Mad_MLon_Start'] = lon_min
+                df.at[f, 'Mad_{:s}Lon_Start'.format(
+                    lon_type[0].upper())] = lon_min
                 df.at[f, 'Mad_GLat_Start'] = max(mad_df["GLat"])
 
-                # calculate Local Time
-                # local time halfway between longitudes and between times
-                mad_lt = coords.longitude_to_local_time(lon_min,
+                # Calculate the local time halfway between longitudes and
+                # between times
+                mad_lt = coords.longitude_to_local_time(glon_min,
                                                         mad_dc['time'][mt])
                 lt_hr = mad_lt.hour + mad_lt.minute / 60 + mad_lt.second / 3600
                 df.at[f, 'LT_Hour'] = lt_hr
                 df.at[f, 'Mad_Nan_Percent'] = nan_perc
 
                 if fig_on:
-                    if panel1 == 0:  # Use first panel for legend
+                    if panel1 == 0:
+                        # Use first panel for legend. The values being plotted
+                        # won't show so they are not all correctly aligned to
+                        # the labels
                         ax = fig.add_subplot(4, 3, 1)
-                        ax.plot(mad_lat[lat_mask],
-                                mad_tec_meas, linestyle='-.',
-                                label='Madrigal TEC')
-                        ax.plot(mad_lat[lat_mask],
-                                mad_tec_meas, color='orange',
+                        ax.plot(mad_df["Mag_Lat"], mad_df["tec"],
+                                linestyle='-.', label='Madrigal TEC')
+                        ax.plot(mad_df["Mag_Lat"], mad_df["tec"],
+                                color='orange',
                                 label='Madrigal Barrel Average')
-                        ax.fill_between(mad_lat[lat_mask],
-                                        mad_tec_meas - mad_std_meas,
-                                        mad_tec_meas + mad_std_meas,
+                        ax.fill_between(mad_df["Mag_Lat"],
+                                        mad_df["tec"] - mad_std_meas[isort],
+                                        mad_df["tec"] + mad_std_meas[isort],
                                         color='g', alpha=0.2, label='stdev')
-                        ax.plot(mad_lat[lat_mask],
-                                mad_tec_meas, linestyle='--', color='k',
-                                label='NIMO TEC')
+                        ax.plot(mad_df["Mag_Lat"], mad_df["tec"],
+                                linestyle='--', color='k', label='NIMO TEC')
                         ax.set_ylim([-99, -89])
                         ax.set_xlim([-100, -99])
                         ax.spines['top'].set_visible(False)
@@ -572,7 +584,9 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                 df.at[f, f'{col_mod_name}_Time'] = mod_df["Time"].iloc[0][
                     0].strftime('%Y/%m/%d_%H:%M:%S.%f')
 
-                df.at[f, f'{col_mod_name}_MLon'] = mod_df["Longitude"].iloc[0]
+                df.at[f, '{:s}_{:s}Lon'.format(
+                    col_mod_name,
+                    lon_type[0].upper())] = mod_df["Longitude"].iloc[0]
                 df.at[f, f'{col_mod_name}_Min_MLat'] = min(mod_df["Mag_Lat"])
                 df.at[f, f'{col_mod_name}_Max_MLat'] = max(mod_df["Mag_Lat"])
                 df.at[f, f'{col_mod_name}_Type'] = eia_type_slope
@@ -596,15 +610,15 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
 
                 if fig_on:
                     ax = fig.add_subplot(4, 3, j)
-                    ax.plot(mad_lat[lat_mask], mad_tec_meas)
-                    ax.scatter(mad_lat[lat_mask],
-                               mad_tec_meas)
-                    ax.fill_between(mad_lat[lat_mask],
-                                    mad_tec_meas - mad_std_meas,
-                                    mad_tec_meas + mad_std_meas, color='g',
-                                    alpha=0.2)
+                    ax.plot(mad_df["Mag_Lat"], mad_df["tec"])
+                    ax.scatter(mad_df["Mag_Lat"], mad_df["tec"])
+                    ax.fill_between(mad_df["Mag_Lat"],
+                                    mad_df["tec"] - mad_std_meas[isort],
+                                    mad_df["tec"] + mad_std_meas[isort],
+                                    color='g', alpha=0.2)
                     ax.plot(mod_df['Mag_Lat'], mod_df['tec'], linestyle='--',
                             color='k', label=eia_type_slope)
+
                 if abs(lon_min) < 180:
                     time_ls = []
                     for i in range(len(mad_tec_meas)):
@@ -625,10 +639,13 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
 
                     df.at[f, 'Mad_EIA_Type'] = eia_type_slope
 
-                    if fig_on:  # Plot MADRIGAL
+                    if fig_on:
+                        # Plot MADRIGAL output
                         ax.plot(mad_lats, mad_tecfilt, color='orange',
                                 label=eia_type_slope)
-                    for pi, p in enumerate(plats):  # Plot Madrigal peaks
+
+                    for pi, p in enumerate(plats):
+                        # Plot Madrigal peaks
                         lat_loc = (abs(p - mad_df["Mag_Lat"]).argmin())
                         df_strl = 'Mad_Peak_MLat' + str(pi + 1)
                         df_strn = 'Mad_Peak_TEC' + str(pi + 1)
@@ -643,7 +660,8 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                         # add local time
                         lt_plot = np.round(lt_hr, 2)
                         ax.set_title(str(lon_min) + ' to ' + str(lon_max)
-                                     + ' GeoLon ' + str(lt_plot) + 'LT')
+                                     + lon_type.capitalize() + 'Lon '
+                                     + str(lt_plot) + 'LT')
                         ax.set_xlim([-mlat_val, mlat_val])
                         ax.legend()
                 j = j + 1
@@ -666,9 +684,9 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
             Path(save_dir).mkdir(parents=True, exist_ok=True)
 
             # Save Figures
-            save_as = (save_dir + '/NIMO_MADRIGAL_' + ds + '_' + ts1 + '_'
-                       + ts2 + '_' + str(lon_start) + '_'
-                       + str(lon_start + 5 * 12) + 'glon.jpg')
+            save_as = os.path.join(save_dir, ''.join([
+                'NIMO_MADRIGAL_', ds, '_', ts1, '_', ts2, '_', str(lon_start),
+                '_', str(lon_start + 5 * 12), lon_type[0].lower(), 'lon.jpg']))
             fig.savefig(save_as)
             plt.close()
             fig_map = madrigal_model_world_maps(stime, mad_dc=mad_dc,
@@ -681,6 +699,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
 
     # Save the statistics to a dialy stats file
     io.write.write_daily_stats(df, mad_dc['time'][mt], model_name.upper(),
-                               'MADRIGAL', file_save_dir, mad_lon=lon_start)
+                               'MADRIGAL', file_save_dir, mad_lon=lon_start,
+                               lon_type=lon_type[0])
 
     return df
