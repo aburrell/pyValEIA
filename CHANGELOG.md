@@ -6,6 +6,9 @@ Summary of all changes made since the first release
 0.X.X (2026-XX-XX)
 ------------------
 * TST: expanded the unit test suite
+* BUG: fixed a bug that caused the saddle test to fail
+* BUG: updated the Swarm downloads to reflect remote changes
+* ENH: added the option to use magnetic meridians in the TEC
 
 0.0.2 (2025-12-15)
 ------------------
