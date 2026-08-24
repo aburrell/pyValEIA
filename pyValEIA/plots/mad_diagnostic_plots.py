@@ -7,7 +7,7 @@
 """Functions for plotting Madrigal TEC data and evaluating EIA detection."""
 
 import datetime as dt
-from  matplotlib import gridspec
+from matplotlib import gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -206,7 +206,6 @@ def mad_model_single_plot(mad_dc, mod_dc, lon_start, stime, mlat_val,
         mad_mlat, mad_mlon = coords.compute_magnetic_coords(
             lat_grid, lon_grid, mad_dc['time'][mt])
 
-        
         # Select by magnetic or geographic longitude, but use the whole
         # grid because magnetic longitude masks over a range of geographic
         # latitudes and longitudes

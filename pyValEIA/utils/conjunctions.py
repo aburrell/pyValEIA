@@ -202,7 +202,7 @@ def mad_conjunction(mod_dc, mlat_val, lon_val, stime, max_tdif=20, mad_tres=5,
     """
     if lon_type.lower() not in ['geo', 'mag']:
         raise ValueError('unknown longitude type: {:}'.format(repr(lon_type)))
-    
+
     # 15 minute time range
     etime = stime + dt.timedelta(minutes=max_tdif)
 
