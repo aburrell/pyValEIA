@@ -21,7 +21,7 @@ def mad_tec_clean(mad_tec_meas, mad_std_meas, mad_mlat, mlat_val, max_nan=20):
     mad_std_meas : array-like
         Standard deviation of `mad_tec_meas`
     mad_mlat : array-like
-        magnetic laittude of `mad_tec_meas`
+        magnetic latitude of `mad_tec_meas`
     mlat_val : int
         magnetic latitude cutoff
     max_nan : float or int
