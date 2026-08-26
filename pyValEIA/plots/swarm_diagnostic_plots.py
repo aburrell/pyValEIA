@@ -251,8 +251,8 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
         Daily file containing pyIRI information or None if no data is available
 
     """
-    columns = ['Satellite', 'PyIRI_Time', 'PyIRI_GLon', 'PyIRI_Min_MLat',
-               'PyIRI_Max_MLat', 'PyIRI_Alt', 'PyIRI_Type',
+    columns = ['Satellite', 'LT_Hour', 'PyIRI_Time', 'PyIRI_GLon',
+               'PyIRI_Min_MLat', 'PyIRI_Max_MLat', 'PyIRI_Alt', 'PyIRI_Type',
                'PyIRI_Peak_MLat1', 'PyIRI_Peak_Ne1', 'PyIRI_Peak_MLat2',
                'PyIRI_Peak_Ne2', 'PyIRI_Peak_MLat3', 'PyIRI_Peak_Ne3']
 
@@ -305,10 +305,10 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
     # Calculate decimal hours for PyIRI input
     mod_decimal_hrs = (date_mod.hour + date_mod.minute / 60
                        + date_mod.second / 3600)
-    mod_glon = daily_df['{:s}_GLon'.format(model_name.capitalize())]
-    mod_alt = daily_df['{:s}_Swarm_Alt'.format(model_name.capitalize())]
-    mod_max_mlats = daily_df['{:s}_Max_MLat'.format(model_name.capitalize())]
-    mod_min_mlats = daily_df['{:s}_Min_MLat'.format(model_name.capitalize())]
+    mod_glon = daily_df['{:s}_GLon'.format(model_name)]
+    mod_alt = daily_df['{:s}_Swarm_Alt'.format(model_name)]
+    mod_max_mlats = daily_df['{:s}_Max_MLat'.format(model_name)]
+    mod_min_mlats = daily_df['{:s}_Min_MLat'.format(model_name)]
     sat_list = daily_df['Satellite']
     swarm_date1 = pd.to_datetime(daily_df['Swarm_Time_Start'].values,
                                  format=format_date)
@@ -316,12 +316,11 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
                                  format=format_date)
 
     for i in range(len(mod_decimal_hrs)):
-
         # Create pyIRI dataset based on model parameters
         tim = date_mod[i]
         glon1 = mod_glon[i]
         alat = np.linspace(-90, 90, 181)
-        alon = np.ones(len(alat)) * glon1
+        alon = np.full(shape=alat.shape, fill_value=glon1)
         mlat, mlon = coords.compute_magnetic_coords(alat, alon, tim)
 
         ahr = np.array([mod_decimal_hrs[i]])
@@ -354,10 +353,13 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
             barrel_radius=pyiri_barrel, window_lat=pyiri_window)
 
         # Data File Inputs
+        lt_stamp = coords.longitude_to_local_time(glon1, tim)
         sat = sat_list[i]
         st1 = swarm_date1[i]
         st2 = swarm_date2[i]
         df.at[i, 'Satellite'] = sat
+        df.at[i, 'LT_Hour'] = (lt_stamp.hour + lt_stamp.minute / 60
+                               + lt_stamp.second / 3600)
         df.at[i, 'PyIRI_Time'] = tim.strftime(format_date)
         df.at[i, 'PyIRI_GLon'] = glon1
         df.at[i, 'PyIRI_Min_MLat'] = min(mlat)
