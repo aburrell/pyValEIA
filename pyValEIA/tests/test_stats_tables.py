@@ -88,7 +88,7 @@ class TestTablesFuncs(unittest.TestCase):
 
         # Ensure the correct error is raised
         with self.assertRaisesRegex(ValueError, "MultiIndex with two levels"):
-            tables.style_df_table(self.tf)
+            tables.style_lss_table(self.tf)
         return
 
     def test_style_lss_table_success(self):
