@@ -126,8 +126,7 @@ def style_df_table(df_table):
     for l0 in df_table.index.levels[0]:
         styled_frame.set_table_styles(
             {(l0, df_table.index.levels[1][0]):
-             [{'selector': '', 'props':
-               'border-bottom: 2px solid black;'}],
+             [{'selector': '', 'props': 'border-bottom: 2px solid black;'}],
              (l0, df_table.index.levels[1][1]):
              [{'selector': '.level0', 'props':
                'border-bottom: 2px solid black'}]},
@@ -235,10 +234,11 @@ def style_lss_table(lss_df, sat_names=None):
     # Add borders
     for l0 in lss_df.index.levels[0]:
         styled_table.set_table_styles(
-            {(l0, lss_df.index.levels[1][-1]): [{'selector': '', 'props':
-                             'border-bottom: 2px solid black;'}],
-             (l0, lss_df.index.levels[1][0]): [{'selector': '.level0', 'props':
-                             'border-bottom: 2px solid black'}]},
+            {(l0, lss_df.index.levels[1][-1]): [{
+                'selector': '', 'props': 'border-bottom: 2px solid black;'}],
+             (l0, lss_df.index.levels[1][0]): [{
+                 'selector': '.level0',
+                 'props': 'border-bottom: 2px solid black'}]},
             overwrite=False, axis=1)
 
     return styled_table

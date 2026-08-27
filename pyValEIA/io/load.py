@@ -127,7 +127,6 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     -----
     The Swarm data team will change variable names and flag interpretations
     between versions.  Currently this code only supports version 07XX data.
-    
 
     """
     # Test the input after assigning variables where first variable is the
