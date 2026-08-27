@@ -125,9 +125,9 @@ class TestTablesFuncs(unittest.TestCase):
                     self.assertEqual(len(self.tf.index.levels[0]), 1)
 
                     if sats[0] not in self.df['Sat'].values:
-                        self.assertEqual(self.tf.values.sum(), 0)
+                        self.assertEqual(self.tf.data.values.sum(), 0)
                     else:
-                        self.assertEqual(self.tf.values.sum(), 2)
+                        self.assertEqual(self.tf.data.values.sum(), 2)
         return
 
     def test_decision_table_model_name(self):
@@ -170,16 +170,16 @@ class TestTablesFuncs(unittest.TestCase):
                 if sats is None:
                     self.assertEqual(len(self.tf.index.levels[0]),
                                      len(np.unique(self.df['Sat'])))
-                    self.assertEqual(self.tf.values[0].sum(), 0)
-                    self.assertEqual(self.tf.values[-1].sum(), 2)
+                    self.assertEqual(self.tf.data.values[0].sum(), 0)
+                    self.assertEqual(self.tf.data.values[-1].sum(), 2)
                 else:
                     self.assertEqual(len(self.tf.index.levels[0]), 1)
 
                     if sats[0] not in self.df['Sat'].values:
-                        self.assertTrue(np.isinf(self.tf.values).all())
+                        self.assertTrue(np.isinf(self.tf.data.values).all())
                     else:
-                        self.assertEqual(self.tf.values[0].sum(), 0)
-                        self.assertEqual(self.tf.values[-1].sum(), -1)
+                        self.assertEqual(self.tf.data.values[0].sum(), 0)
+                        self.assertEqual(self.tf.data.values[-1].sum(), -1)
         return
 
     def test_lss_table_model_name(self):
