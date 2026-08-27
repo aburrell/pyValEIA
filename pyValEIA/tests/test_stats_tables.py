@@ -62,7 +62,7 @@ class TestTablesFuncs(unittest.TestCase):
     def test_style_df_table_success(self):
         """Test successful dataframe table formatting."""
         # Create a table from the data frame
-        self.tf = tables.decision_table_sat(self.df)
+        self.tf = tables.decision_table_sat(self.df, set_style=False)
 
         # Style the table
         self.out = tables.style_df_table(self.tf)
@@ -94,7 +94,7 @@ class TestTablesFuncs(unittest.TestCase):
     def test_style_lss_table_success(self):
         """Test successful LSS table formatting."""
         # Create a table from the data frame
-        self.tf = tables.lss_table_sat(self.df, self.df)
+        self.tf = tables.lss_table_sat(self.df, self.df, set_style=False)
 
         # Style the table
         self.out = tables.style_lss_table(self.tf)

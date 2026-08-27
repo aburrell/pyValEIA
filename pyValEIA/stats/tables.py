@@ -13,7 +13,8 @@ from pyValEIA.stats import skill_score
 
 
 def decision_table_sat(states, sats=None, sat_key='Sat', eia_type='eia',
-                       model_name='Model', const_name='Swarm'):
+                       model_name='Model', const_name='Swarm',
+                       set_style=True):
     """Decision table summing hit/miss/corr-neg/false-pos states by satellite.
 
     Parameters
@@ -33,13 +34,16 @@ def decision_table_sat(states, sats=None, sat_key='Sat', eia_type='eia',
         Model name for decision table label (default='Model')
     const_name : str
         Satellite constellation name (default='Swarm')
+    set_style : bool
+        Style the table output (default=True)
 
     Returns
     -------
-    table_frame : pd.DataFrame
+    table_frame : pd.DataFrame or pd.io.formats.style.Styler
         DataFrame in table format separated by satellite and event state
         (state, non-state). Index using: table_frame.loc[(
-            f'{const_name} {satellite}', eia_type), (model_name, eia_type)]
+            f'{const_name} {satellite}', eia_type), (model_name, eia_type)].
+        If `set_style` is True, the output will be Styler.
 
     See Also
     --------
@@ -72,6 +76,9 @@ def decision_table_sat(states, sats=None, sat_key='Sat', eia_type='eia',
             table_frame.loc[(sat_name, 'Non-' + eia_type), :] = np.array([
                 falarm, corneg])
 
+    if set_style:
+        table_frame = style_df_table(table_frame)
+
     return table_frame
 
 
@@ -85,7 +92,7 @@ def style_df_table(df_table):
 
     Returns
     -------
-    styled_frame : pd.DataFrame
+    styled_frame : pd.io.formats.style.Styler
         Styled DataFrame
 
     Raises
@@ -138,7 +145,7 @@ def style_df_table(df_table):
 
 
 def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
-                  sats=None, sat_key='Sat', const_name='Swarm'):
+                  sats=None, sat_key='Sat', const_name='Swarm', set_style=True):
     """Create table including the Liemohn Skill Scores 1-4.
 
     Parameters
@@ -164,12 +171,14 @@ def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
         (default='Sat')
     const_name : str
         Satellite constellation name (default='Swarm')
+    set_style : bool
+        Style the table output (default=True)
 
     Returns
     -------
-    lss_df : pd.DataFrame
-        DataFrame in table format separated by satellite
-        and Liemohn skill score
+    lss_df : pd.DataFrame or pd.io.formats.style.Styler
+        DataFrame in table format separated by satellite and Liemohn skill
+        score, in Styler format if `set_style` is True.
 
     See Also
     --------
@@ -203,12 +212,13 @@ def lss_table_sat(model1, model2, model1_name='Model1', model2_name='Model2',
             lss_df.loc[(sat_name, 'LSS3'), :] = np.array([lss3_m1, lss3_m2])
             lss_df.loc[(sat_name, 'LSS4'), :] = np.array([lss4_m1, lss4_m2])
 
-    # Set the style and output
-    lss_df.style
+    if set_style:
+        lss_df = style_lss_table(lss_df)
+
     return lss_df
 
 
-def style_lss_table(lss_df, sat_names=None):
+def style_lss_table(lss_df):
     """Style the LSS decision table.
 
     Parameters
@@ -218,7 +228,7 @@ def style_lss_table(lss_df, sat_names=None):
 
     Returns
     -------
-    styled_table : pd.DataFrame
+    styled_table : pd.io.formats.style.Styler
         LSS table with dividers
 
     """
