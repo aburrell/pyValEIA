@@ -72,7 +72,6 @@ def decision_table_sat(states, sats=None, sat_key='Sat', eia_type='eia',
             table_frame.loc[(sat_name, 'Non-' + eia_type), :] = np.array([
                 falarm, corneg])
 
-    table_frame.style
     return table_frame
 
 
