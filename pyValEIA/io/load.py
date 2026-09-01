@@ -520,9 +520,9 @@ def multiday_states_report(date_range, daily_dir, model_name, obs_name,
 
     # Initialize the parameter dicts
     mod_dict = {'state': list(), 'direction': list(), 'type': list(),
-                'Glon': list(), 'LT': list()}
+                'GLon': list(), 'LT': list()}
     obs_dict = {'state': list(), 'direction': list(), 'type': list(),
-                'Glon': list(), 'LT': list()}
+                'GLon': list(), 'LT': list()}
 
     # Determine the observation-specific inputs
     if obs_name.lower() == 'swarm':
@@ -563,36 +563,41 @@ def multiday_states_report(date_range, daily_dir, model_name, obs_name,
                                        **load_kwargs)
 
         # Clean and save the model data
-        clean_out = clean_type(daily_stats[model_str].values)
-        mod_dict['state'].extend(clean_out[0])
-        mod_dict['direction'].extend(clean_out[1])
-        mod_dict['type'].extend(daily_stats[model_str].values)
+        if model_str in daily_stats.keys():
+            clean_out = clean_type(daily_stats[model_str].values)
+            mod_dict['state'].extend(clean_out[0])
+            mod_dict['direction'].extend(clean_out[1])
+            mod_dict['type'].extend(daily_stats[model_str].values)
+            mod_dict['GLon'].extend(
+                daily_stats['{:s}_GLon'.format(model_name)].values)
+            mod_dict['LT'].extend(daily_stats['LT_Hour'].values)
+
+            if 'Sat' in mod_dict.keys():
+                mod_dict['Sat'].extend(daily_stats['Satellite'].values)
 
         # Clean and save the observed data
-        clean_out = clean_type(daily_stats[obs_str].values)
-        obs_dict['state'].extend(clean_out[0])
-        obs_dict['directon'].extend(clean_out[1])
-        obs_dict['type'].extend(daily_stats[obs_str].values)
+        if obs_str in daily_stats.keys():
+            clean_out = clean_type(daily_stats[obs_str].values)
+            obs_dict['state'].extend(clean_out[0])
+            obs_dict['direction'].extend(clean_out[1])
+            obs_dict['type'].extend(daily_stats[obs_str].values)
+            obs_dict['GLon'].extend(
+                daily_stats['{:s}_GLon'.format(model_name)].values)
+            obs_dict['LT'].extend(daily_stats['LT_Hour'].values)
 
-        # Save the location information
-        mod_dict['Glon'].extend(
-            daily_stats['{:s}_Glon'.format(model_name)].values)
-        obs_dict['Glon'].extend(
-            daily_stats['{:s}_Glon'.format(model_name)].values)
-        mod_dict['Glon'].extend(daily_stats['LT_Hour'].values)
-        obs_dict['Glon'].extend(daily_stats['LT_Hour'].values)
-
-        if 'Sat' in mod_dict.keys():
-            mod_dict['Sat'].extend(daily_stats['Satellite'].values)
-            obs_dict['Sat'].extend(daily_stats['Satellite'].values)
+            if 'Sat' in mod_dict.keys():
+                obs_dict['Sat'].extend(daily_stats['Satellite'].values)
 
     # Cast the dictionaries as pandas DataFrames
     model_frame = pd.DataFrame(mod_dict)
     obs_frame = pd.DataFrame(obs_dict)
 
     # Get the skill score of the model against the observations
-    model_frame['skill'] = skill_score.state_check(
-        obs_frame[orientation].values, model_frame[orientation].values,
-        state=comp_type)
+    if not obs_frame.empty and not model_frame.empty:
+        model_frame['skill'] = skill_score.state_check(
+            obs_frame[orientation].values, model_frame[orientation].values,
+            event_val=comp_type)
+    else:
+        logger.warning('Unable to perform skill score state check')
 
     return model_frame, obs_frame
