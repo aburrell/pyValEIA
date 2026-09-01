@@ -39,10 +39,16 @@ def build_daily_stats_filename(stime, model, obs, file_dir, **kwargs):
     dataset = "_".join([model, obs.upper()])
 
     if obs.upper() == 'MADRIGAL':
-        if 'mad_lon' in kwargs.keys():
-            end_str = "_{:.0f}glon_ascii.txt".format(kwargs['mad_lon'])
+        if 'lon_type' not in kwargs.keys():
+            lon_type = 'g'
         else:
-            end_str = "_{:.0f}glon_ascii.txt".format(-90.0)
+            lon_type = kwargs['lon_type'][0].lower()
+
+        if 'mad_lon' in kwargs.keys():
+            end_str = "_{:.0f}{:s}lon_ascii.txt".format(kwargs['mad_lon'],
+                                                        lon_type)
+        else:
+            end_str = "_{:.0f}{:s}lon_ascii.txt".format(-90.0, lon_type)
     else:
         end_str = "ascii.txt"
 
@@ -73,7 +79,8 @@ def write_daily_stats(stat_data, stime, model, obs, file_dir, **kwargs):
         File directory, if it does not exist it will use the current directory
     kwargs : dict
         Optional kwargs by data type.  Includes 'mad_lon', which expects
-        longitudes of either -90 deg E or 60 deg E for Madrigal data.
+        longitudes of either -90 deg E or 60 deg E for Madrigal data, and
+        'lon_type', which expects one of 'g' or 'm'
 
     """
     # Test the output directory
