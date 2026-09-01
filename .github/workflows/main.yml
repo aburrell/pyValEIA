@@ -12,22 +12,22 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.13", "3.14"]
         numpy_ver: ["latest"]
         test_config: ["standard"]
         include:
           # NEP29 compliance settings
-          - python-version: "3.10"
-            numpy_ver: "1.25"
+          - python-version: "3.12"
+            numpy_ver: "2.1"
             os: ubuntu-latest
             test_config: "NEP29"
 
     name: Test ${{ matrix.test_config }} using Python ${{ matrix.python-version }} on ${{ matrix.os }} with numpy ${{ matrix.numpy_ver }}
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -39,7 +39,7 @@ jobs:
       if: ${{ matrix.test_config != 'NEP29' && matrix.os == 'macos-latest' }}
       run:  |
           brew reinstall gcc@15
-          CC=/opt/homebrew/bin/gcc-15 FF=/opt/homebrew/bin/gfortran-15 pip install --upgrade-strategy only-if-needed .[test]
+          CC=/opt/homebrew/bin/gcc-15 FC=/opt/homebrew/bin/gfortran-15 pip install --upgrade-strategy only-if-needed .[test]
 
     - name: Install NEP29 dependencies
       if: ${{ matrix.test_config == 'NEP29'}}

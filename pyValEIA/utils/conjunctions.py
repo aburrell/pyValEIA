@@ -165,7 +165,8 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
     return mod_df, mod_map
 
 
-def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
+def mad_conjunction(mod_dc, mlat_val, lon_val, stime, max_tdif=20, mad_tres=5,
+                    lon_type='geo'):
     """Find conjunctions between a model and Madrigal data.
 
     Parameters
@@ -174,14 +175,17 @@ def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
         Dictionary of model data
     mlat_val : double
         +/- magnetic latitude
-    glon_val : double
-        Geographic longitude of conjunction
+    lon_val : double
+        Geographic or magnetic longitude of conjunction
     stime : dt.datetime
         Datetime for conjunction
     max_tdif : int
         Maximum time difference in minutes (default=20)
     mad_tres : int
         Time resolution of the Madrigal TEC data in minutes (default=5)
+    lon_type : str
+        Specify whether to select by geographic, 'geo', or magnetic, 'mag',
+        longitude (default='geo')
 
     Returns
     -------
@@ -190,15 +194,22 @@ def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
     mod_map : dict
         Dictionary of 2D arrays of TEC, geo lon, and geo lat for map plots
 
+    Raises
+    ------
+    ValueError
+        For unknown longitude type
+
     """
+    if lon_type.lower() not in ['geo', 'mag']:
+        raise ValueError('unknown longitude type: {:}'.format(repr(lon_type)))
+
     # 15 minute time range
     etime = stime + dt.timedelta(minutes=max_tdif)
 
-    # Get NIMO longitudes and time of conjunction
-    mod_lon_ch = mod_dc['glon'][(abs(mod_dc['glon'] - glon_val)
-                                 == min(abs(mod_dc['glon'] - glon_val)))]
+    # Get NIMO time of conjunction
     mod_time = mod_dc['time'][((mod_dc['time'] >= stime)
                                & (mod_dc['time'] <= etime))]
+
     if len(mod_time) == 0:
         mod_time = mod_dc['time'][((mod_dc['time'] >= stime
                                     - dt.timedelta(minutes=mad_tres))
@@ -216,20 +227,43 @@ def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
         else:
             raise ValueError(f"Model {mod_time} - Mad{stime} > {max_tdif} min")
 
-    # Model COINCIDENCE
-    # time and longitude indices
+    # Assign the time index
     n_t = np.where(mod_time == mod_dc['time'])[0][0]
-    n_l = np.where(mod_lon_ch[0] == mod_dc['glon'])[0][0]
 
-    mod_tec_lat_all = mod_dc['tec'][n_t, :, n_l]
+    # Get the longitude of the conjunction
+    lon_grid, lat_grid = np.meshgrid(mod_dc['glon'], mod_dc['glat'])
+    if lon_type.lower() == 'geo':
+        mod_lon_ch = mod_dc['glon'][(abs(mod_dc['glon'] - lon_val)
+                                     == min(abs(mod_dc['glon'] - lon_val)))]
+        lon_mask = (mod_lon_ch[0] == lon_grid)
+        glat = mod_dc['glat']
 
-    # Convert geo to mag coor
-    mod_lon_ls = np.ones(len(mod_dc['glat'])) * mod_lon_ch[0]
-    mlat, mlon = coords.compute_magnetic_coords(mod_dc['glat'],
-                                                mod_lon_ls, mod_time[0])
+        # Convert geo to mag coordinates
+        mlat, mlon = coords.compute_magnetic_coords(
+            mod_dc['glat'], np.full(shape=mod_dc['glat'].shape,
+                                    fill_value=mod_lon_ch[0]), mod_time[0])
+    else:
+        # Convert geo to mag coordinates
+        mlat, mlon = coords.compute_magnetic_coords(lat_grid, lon_grid,
+                                                    mod_time[0])
 
+        # Get the model longitude resolution
+        lon_res = max(mod_dc['glon'][1:] - mod_dc['glon'][:-1])
+        lon_mask = abs(mlon - lon_val) < lon_res
+        mod_lon_ch = [np.mean(mlon[lon_mask])]
+        mlat = mlat[lon_mask]
+        mlon = mlon[lon_mask]
+        glat = lat_grid[lon_mask]
+
+    # Model COINCIDENCE selection
+    mod_tec_lat_all = mod_dc['tec'][n_t, lon_mask]
+
+    # Mask data to the desired magnetic latitude range and order by
+    # magnetic latitude
     mlat1 = -1 * abs(mlat_val)
     mlat2 = abs(mlat_val)
+    lat_mask = (mlat >= mlat1) & (mlat <= mlat2)
+    isort = np.argsort(mlat[lat_mask])
 
     mod_tec_return = mod_tec_lat_all[(mlat >= mlat1) & (mlat <= mlat2)]
     time_ls = [mod_time for i in range(len(mod_tec_return))]
@@ -237,10 +271,11 @@ def mad_conjunction(mod_dc, mlat_val, glon_val, stime, max_tdif=20, mad_tres=5):
     mod_df = pd.DataFrame()
     mod_df['Time'] = time_ls
     mod_df['tec'] = mod_tec_return
-    mod_df['Mag_Lat'] = mlat[(mlat >= mlat1) & (mlat <= mlat2)]
-    mod_df['Mag_Lon'] = mlon[(mlat >= mlat1) & (mlat <= mlat2)]
-    mod_df['Longitude'] = np.ones(len(mod_tec_return)) * mod_lon_ch[0]
-    mod_df['Latitude'] = mod_dc['glat'][(mlat >= mlat1) & (mlat <= mlat2)]
+    mod_df['Mag_Lat'] = mlat[lat_mask][isort]
+    mod_df['Mag_Lon'] = mlon[lat_mask][isort]
+    mod_df['Longitude'] = np.full(shape=mod_tec_return.shape,
+                                  fill_value=mod_lon_ch[0])
+    mod_df['Latitude'] = glat[lat_mask][isort]
 
     mod_map = {'tec': mod_dc['tec'][n_t, :, :], 'glon': mod_dc['glon'],
                'glat': mod_dc['glat']}

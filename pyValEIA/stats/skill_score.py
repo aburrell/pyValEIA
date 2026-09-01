@@ -47,31 +47,21 @@ def state_check(truth_vals, test_vals, event_val='eia'):
     if len(test_vals) != len(truth_vals):
         raise ValueError('Number of test values are not equal to truth values')
 
-    # Initialize the output
-    event_states = []
+    # Initialize the output to be False
+    event_states = np.full(shape=len(test_vals), fill_value='F')
 
-    # Cycle through each test and truth value
-    for i, test in enumerate(test_vals):
-        truth = truth_vals[i]
+    # Get the masks for hits, misses, and correct negatives
+    hit_mask = (np.asarray(test_vals) == event_val) & (
+        np.asarray(truth_vals) == event_val)
+    miss_mask = (np.asarray(test_vals) != event_val) & (
+        np.asarray(truth_vals) == event_val)
+    corn_mask = (np.asarray(test_vals) != event_val) & (
+        np.asarray(truth_vals) != event_val)
 
-        # Determine the possible outcomes based on the truth observation
-        # of the desired event
-        if truth == event_val:
-            # This is either a hit or a miss, depending on whether or not the
-            # test value agrees with the truth value
-            if test == event_val:
-                event_states.append('H')
-            else:
-                event_states.append('M')
-        else:
-            # This is either a correct negative or false alarm, depending on
-            # whether or not the test value agrees with the truth value
-            if test != event_val:
-                event_states.append('C')
-            else:
-                event_states.append('F')
-
-    event_states = np.array(event_states)
+    # Assign the values
+    event_states[hit_mask] = 'H'
+    event_states[miss_mask] = 'M'
+    event_states[corn_mask] = 'C'
 
     return event_states
 
@@ -98,6 +88,9 @@ def coin_toss_state(event_states):
         Number of correct negatives for the coin toss model
 
     """
+    # Ensure the input is array-like
+    event_states = np.asarray(event_states)
+
     # Determine the number of times the truth model was in the desired state
     coin_hm = sum((event_states == 'H') | (event_states == 'M'))
 
@@ -110,7 +103,7 @@ def coin_toss_state(event_states):
     hit = int(np.floor(coin_hm / 2))
     miss = int(coin_hm) - hit
     corneg = int(np.floor(coin_fc / 2))
-    falarm = coin_fc - corneg
+    falarm = int(coin_fc - corneg)
 
     return hit, miss, corneg, falarm
 
@@ -127,14 +120,14 @@ def liemohn_skill_score(event_states, coin=False):
         if False, returns will be LSS of event_states (default)
     Returns
     -------
-    LSS1 : double
-        Liemohn Skill Score 1
-    LSS2 : double
-        Liemohn Skill Score 2
-    LSS3 : double
-        Liemohn Skill Score 3
-    LSS4 : double
-        Liemohn Skill Score 4
+    LSS1 : float
+        Liemohn Skill Score 1 or Inf if the denominator is zero
+    LSS2 : float
+        Liemohn Skill Score 2 or Inf if the denominator is zero
+    LSS3 : float
+        Liemohn Skill Score 3 or Inf if the denominator is zero
+    LSS4 : float
+        Liemohn Skill Score 4 or Inf if the denominator is zero
 
     References
     ----------
@@ -150,15 +143,18 @@ def liemohn_skill_score(event_states, coin=False):
         hit, miss, falarm, corneg = coin_toss_state(event_states)
     else:
         # Determine the state sums for each skill quadrant
-        hit = sum(event_states == 'H')
-        falarm = sum(event_states == 'F')
-        miss = sum(event_states == 'M')
-        corneg = sum(event_states == 'C')
+        hit = sum(np.asarray(event_states) == 'H')
+        falarm = sum(np.asarray(event_states) == 'F')
+        miss = sum(np.asarray(event_states) == 'M')
+        corneg = sum(np.asarray(event_states) == 'C')
 
     # Liemohn Skill Score 1
-    lss1 = ((2 * hit * corneg + miss * corneg + hit * falarm - hit * miss
-             - miss ** 2 - falarm ** 2 - falarm * corneg)
-            / (2 * (hit + miss) * (falarm + corneg)))
+    denom = 2 * (hit + miss) * (falarm + corneg)
+    if abs(denom) > 1.0e-7:
+        lss1 = ((2 * hit * corneg + miss * corneg + hit * falarm - hit * miss
+                 - miss ** 2 - falarm ** 2 - falarm * corneg) / denom)
+    else:
+        lss1 = np.inf
 
     # Liemohn Skill Score 2 (LSS2t/LSS2b)
     lss2t = (hit * ((hit + miss) ** 2 + 2 * (hit + miss) * (falarm + corneg))
@@ -166,16 +162,28 @@ def liemohn_skill_score(event_states, coin=False):
     lss2b = ((hit + miss + falarm) * ((hit + miss) ** 2 + 2 * (hit + miss)
                                       * (falarm + corneg))
              - (hit + miss) ** 2 * (hit + miss + falarm))
-    lss2 = lss2t / lss2b
+
+    if abs(lss2b) > 1.0e-7:
+        lss2 = lss2t / lss2b
+    else:
+        lss2 = np.inf
 
     # Liemohn Skill Score 3
-    lss3 = ((hit + corneg) - (miss + falarm)) / (hit + miss + falarm + corneg)
+    denom = hit + miss + falarm + corneg
+    if abs(denom) > 1.0e-7:
+        lss3 = ((hit + corneg) - (miss + falarm)) / denom
+    else:
+        lss3 = np.inf
 
     # Liemohn Skill Score 4
-    lss4 = ((hit * (2 * (hit + miss) + falarm + corneg) - (hit + miss)
-             * (hit + miss + falarm))
-            / ((hit + miss + falarm) * (2 * (hit + miss) + falarm + corneg)
-               - (hit + miss) * (hit + miss + falarm)))
+    denom = ((hit + miss + falarm) * (2 * (hit + miss) + falarm + corneg)
+             - (hit + miss) * (hit + miss + falarm))
+
+    if abs(denom) > 1.0e-7:
+        lss4 = ((hit * (2 * (hit + miss) + falarm + corneg) - (hit + miss)
+                 * (hit + miss + falarm)) / denom)
+    else:
+        lss4 = np.inf
 
     return lss1, lss2, lss3, lss4
 
@@ -193,10 +201,12 @@ def calc_pc_and_csi(event_states, coin=False):
 
     Returns
     -------
-    pcor : double
-        percent correct as a decimal between 0 and 1
-    cs_ind : double
-        critical success index as a decimal between 0 and 1
+    pcor : float
+        Percent correct as a decimal between 0 and 1, Inf if the denominator
+        is zero
+    cs_ind : float
+        Critical success index as a decimal between 0 and 1, Inf if the
+        denominator is zero
 
     """
     if coin:
@@ -209,7 +219,11 @@ def calc_pc_and_csi(event_states, coin=False):
         miss = sum(event_states == 'M')
         corneg = sum(event_states == 'C')
 
-    pcor = (hit + corneg) / (hit + miss + falarm + corneg)
-    cs_ind = hit / (hit + miss + falarm)
+    # Calculate the statistics, avoiding division by zero
+    denom = hit + miss + falarm
+    cs_ind = hit / denom if abs(denom) > 1.0e-7 else np.inf
+
+    denom += corneg
+    pcor = (hit + corneg) / denom if abs(denom) > 1.0e-7 else np.inf
 
     return pcor, cs_ind

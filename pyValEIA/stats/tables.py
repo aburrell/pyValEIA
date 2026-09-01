@@ -41,6 +41,10 @@ def decision_table_sat(states, sats=None, sat_key='Sat', eia_type='eia',
         (state, non-state). Index using: table_frame.loc[(
             f'{const_name} {satellite}', eia_type), (model_name, eia_type)]
 
+    See Also
+    --------
+    io.load.multiday_states_report
+
     """
     # If not provided, get the unique satellite IDs
     if sats is None:

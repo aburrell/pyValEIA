@@ -14,13 +14,13 @@ import zipfile
 
 from pyValEIA import logger
 
-swarm_url = "https://swarm-diss.eo.esa.int/?do=download&file=swarm%2FLevel"
+swarm_url = "https://swarm-diss.eo.esa.int/"
 
 
 def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
                              level='1b', baseline='Latest_baselines',
                              instrument='EFI', dataset='LP',
-                             f_end='0602', stime_str='000000',
+                             f_end='0702', stime_str='000000',
                              etime_str='235959', num_days=0, remove=False):
     """Download daily Swarm files and unzip them into instrument-date dirs.
 
@@ -48,9 +48,9 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
         (default='LP')
     f_end : str
         For different data products there are different numbers at the end
-        The most common for EFIxLP is '0602' where '0602' represents
+        The most common for EFIxLP is '0702' where '0702' represents
         the file version. Other data products also have a record type string.
-        (default='0602')
+        (default='0702')
     stime_str : str
         Starting time using the string format "HHMMSS". Most files start with
         "000000", but if the file is not the whole day it will be different.
@@ -60,7 +60,7 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
         "235959", but if the file is not the whole day it will be different.
         Check website if download fails (default="235959")
     num_days : int
-        Number of days after the starting date to be downloaded after the
+       Number of days after the starting date to be downloaded after the
         initial day (default=0)
     remove : bool
         If True, remove zip archive after unpacking (default=False)
@@ -77,14 +77,12 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
         If an unknown level is supplied
 
     """
-    # Adjsut the name based on if it is level 1b or level 2daily
-    full_url = ''.join([base_url, level, "%2F", baseline, "%2F", instrument,
+    # Create the URL without the filename based on the data level
+    full_url = ''.join([base_url, "?do=download&file=swarm%2FLevel", level,
+                        "%2F", baseline, "%2F", instrument,
                         'x_' if level == '1b' else '%2F', dataset])
 
     # Create the output folder
-    yr = ddate.year
-    mnth = ddate.month
-    dy = ddate.day
     out_folder = os.path.join(out_dir, instrument, '_'.join(['Sat', satellite]),
                               ddate.strftime('%Y'))
 
@@ -94,7 +92,7 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
         os.makedirs(out_folder)
 
     # Start at first day and go for num_days
-    start_date = dt.datetime(yr, mnth, dy)
+    start_date = dt.datetime(ddate.year, ddate.month, ddate.day)
     end_date = start_date + dt.timedelta(days=num_days)
 
     # Start with start date and go until end date is reached
@@ -162,6 +160,10 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
                 except zipfile.BadZipFile:
                     logger.warning(
                         f"Failed filename {filename} does not exist")
+            else:
+                logger.warning("".join(["Failed to access file URL: ",
+                                        file_url, ", check `f_end`, ",
+                                        "`stime_str`, and `etime_str`"]))
 
         # Cycle to the next day
         start_date += dt.timedelta(days=1)

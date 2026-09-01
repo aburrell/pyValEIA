@@ -87,7 +87,7 @@ def extract_cdf_time(cdf_data, time_var='Timestamp'):
 
 
 def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
-               dataset='LP', f_end='0602'):
+               dataset='LP', f_end='0702'):
     """Load Swarm data, downloading any missing files.
 
     Parameters
@@ -108,9 +108,9 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
         (default='LP')
     f_end : str
         For different data products there are different numbers at the end
-        The most common for EFIxLP is '0602' where '0602' represents
+        The most common for EFIxLP is '0702' where '0702' represents
         the file version. Other datasets may also have a string that represents
-        the record type (default='0602')
+        the record type (default='0702')
 
     Returns
     -------
@@ -120,15 +120,21 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     Raises
     ------
     ValueError
-        If an unknown dataset is requested (currently only supports 'LP')
+        If an unknown dataset is requested (currently only supports 'LP') or
+        an older format is loaded
+
+    Notes
+    -----
+    The Swarm data team will change variable names and flag interpretations
+    between versions.  Currently this code only supports version 07XX data.
 
     """
     # Test the input after assigning variables where first variable is the
     # time stamp, the second variable is geodetic latitude, and the third
-    # variable is geographic longitude
-    variables = {'LP': ["Timestamp", "Latitude", "Longitude", "Ne", "Ne_error",
-                        "Te", "Te_error", "Flags_Ne", "Flags_Te", "Flags_LP",
-                        "Radius"]}
+    # variable is geographic longitude. These may change in the future.
+    variables = {'LP': ["Timestamp", "Latitude", "Longitude", "N_elec",
+                        "N_elec_error", "T_elec", "T_elec_error",
+                        "Flags_N_elec", "Flags_T_elec", "Flags_LP", "Radius"]}
 
     if dataset not in variables.keys():
         raise ValueError('unknown Swarm dataset.')
@@ -137,8 +143,11 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
     lat_var = variables[dataset][1]
     lon_var = variables[dataset][2]
 
-    # Set variables to be renamed
-    rename = {'LP': {'Flags_Ne': 'Ne_flag', 'Flags_Te': 'Te_flag',
+    # Set variables to be renamed. These were the variable names at the time
+    # this code was developed, several Swarm file versions in the past
+    rename = {'LP': {'Flags_N_elec': 'Ne_flag', 'N_elec': 'Ne',
+                     'N_elec_error': 'Ne_error', 'Flags_T_elec': 'Te_flag',
+                     'T_elec': 'Te', 'T_elec_error': 'Te_error',
                      'Flags_LP': 'LP_flag', 'Radius': 'Altitude'}}
 
     # Initalize the output
@@ -212,6 +221,12 @@ def load_swarm(start_date, end_date, sat_id, file_dir, instrument='EFI',
 
         if dataset in rename.keys():
             swarm_data = swarm_data.rename(columns=rename[dataset])
+
+        # Check that electron density and its flag are correctly labeled in
+        # the data
+        if not np.all([ne_var in swarm_data.columns for ne_var in
+                       ['Ne', 'Ne_error', 'Ne_flag']]):
+            raise ValueError('unknown data format for {:}'.format(filename))
 
     return swarm_data
 

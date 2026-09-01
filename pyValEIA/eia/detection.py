@@ -99,6 +99,7 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         x_new = np.linspace(min(sort_lat), max(sort_lat),
                             interpolate * len(sort_lat))
         sort_density = np.interp(x_new, sort_lat, sort_density)
+        sort_lat = np.array(x_new)
 
     # Perform the first round of smoothing
     if filt[:6] == 'barrel':
@@ -145,7 +146,7 @@ def eia_complete(lat, density, den_type, filt='', interpolate=1,
         # A moving filter window using a median or average is requested.
         # Determine the window size
         window = int(np.round(abs(window_lat / np.median(np.diff(sort_lat)))))
-        measure = filt.split('_', "")[-1]
+        measure = filt.split('_')[-1]
         den_filt2 = filters.rolling_nanmeasure(den_filt1, window, measure)
 
     # Calculate gradient
@@ -993,15 +994,15 @@ def zero_max(lat, dens, zlats, maxes=None):
                 # If it is a peak, set the second index
                 p2 = abs(lat - latz_north[tn]).argmin()
 
-    if len(maxes) > 0:
-        # If one peak is given, replace either p1 (souther) or p2 (northern)
+    if maxes is not None and len(maxes) > 0:
+        # If one peak is given, replace either p1 (southern) or p2 (northern)
         if lat[maxes[0]] > 0:
             p2 = maxes[0][0]
         elif lat[maxes[0]] < 0:
             p1 = maxes[0][0]
     else:
         # No current maxes, use a sinlge max
-        if (p1 < 0) & (p2 < 0):
+        if (p1 is None) & (p2 is None):
             t_last = densz.argmax()
             p1 = abs(lat - latz[t_last]).argmin()
 
