@@ -342,8 +342,8 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
     mod_file_dir : str
         NIMO file directory
     mod_name_format : str
-        prefix of NIMO file including date format before .nc extension, e.g.,
-        'NIMO_AQ_%Y%j'
+        Filename format of the desired model file including date format, as
+        desired by the loading function, e.g., 'NIMO_AQ_%Y%j'
     model_name : str
         Model name (default='NIMO')
     mod_load_func : function
