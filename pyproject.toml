@@ -56,7 +56,8 @@ dependencies = [
 test = [
   "coverage[toml]",
   "flake8",
-  "flake8-docstrings"
+  "flake8-docstrings",
+  "tempfile"
 ]
 doc = [
   "myst_parser",
