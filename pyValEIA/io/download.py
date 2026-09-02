@@ -134,7 +134,8 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
             found_file = glob.glob(extracted_files)[0]
 
         if os.path.exists(found_file):
-            logger.info(f"File already exists: {found_file}.Skipping download.")
+            logger.info(
+                f"File already exists: {found_file}. Skipping download.")
         else:
             # Download file from the file URL
             response = requests.get(file_url)
