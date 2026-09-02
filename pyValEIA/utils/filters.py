@@ -264,8 +264,8 @@ def detect_outliers(arr):
         arr = np.array([arr])
 
     # Get the quartiles and IQR
-    q1 = np.percentile(arr[np.isfinite(arr)], 25)
-    q3 = np.percentile(arr[np.isfinite(arr)], 75)
+    q1 = np.nanpercentile(arr, 25)
+    q3 = np.nanpercentile(arr, 75)
     iqr = q3 - q1
 
     # Get the upper and lower limits
