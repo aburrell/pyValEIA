@@ -118,8 +118,8 @@ def simple_barrel_roll(xvar, yvar, barrel_radius, envelope=True,
 
         # Retrieve all the original values from between the upper and lower
         # barrel roll limits
-        yvar_det[(yvar < brc_upper) & (yvar > brc_lower)] = yvar[
-            ((yvar < brc_upper) & (yvar > brc_lower))]
+        brc_mask = (yvar <= brc_upper) & (yvar >= brc_lower)
+        yvar_det[brc_mask] = yvar[brc_mask]
 
         # Check to see if there are NaN values left in the output
         nan_mask = np.isnan(yvar_det)
@@ -149,6 +149,11 @@ def rolling_nanmeasure(arr, window, measure='mean'):
     -------
     out : array-like
         rolling measured array of same length as original
+
+    Raises
+    ------
+    ValueError
+        If an unknown smoothing method is provided
 
     """
     # Initialize array of same length as input
