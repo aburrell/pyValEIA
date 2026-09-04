@@ -106,7 +106,7 @@ def download_and_unzip_swarm(ddate, satellite, out_dir, base_url=swarm_url,
             filename = ''.join([f_bse, instrument, satellite, "_", dataset,
                                 "_1B_", d_str, ".CDF.ZIP"])
         elif level == '2daily':
-            filename = ''.join([f_bse, instrument, satellite, dataset, "_2F_",
+            filename = ''.join([f_bse, instrument, satellite, dataset, "_2__",
                                 d_str, ".ZIP"])
         else:
             raise ValueError('unknown level: {:}'.format(level))
