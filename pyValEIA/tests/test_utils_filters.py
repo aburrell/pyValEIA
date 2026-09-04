@@ -115,6 +115,25 @@ class TestFiltersFuncs(unittest.TestCase):
                 self.assertTrue(np.isnan(self.out).all())
         return
 
+    def test_simple_barrel_roll(self):
+        """Test success of `simple_barrel_roll` with a large barrel."""
+        # Set a second array of the same shape and range, but different values
+        xvar = np.linspace(np.nanmin(self.in_arr), np.nanmax(self.in_arr),
+                           self.in_arr.shape[0])
+
+        for env, low, up in ([True, 0.6, 0.2], [True, 0.2, 0.6], [False, 0, 0]):
+            with self.subTest(envelope=env, envelope_lower=low,
+                              envelope_upper=up):
+                self.out = filters.simple_barrel_roll(
+                    xvar, self.in_arr, 30, envelope=env, envelope_lower=low,
+                    envelope_upper=up)
+
+                # Test the output
+                self.assertTrue(np.isfinite(self.out).all())
+                self.assertLessEqual(self.out.max(), np.nanmax(self.in_arr))
+                self.assertGreaterEqual(self.out.min(), np.nanmin(self.in_arr))
+        return
+
     def test_simple_barrel_roll_no_roi(self):
         """Test success of `simple_barrel_roll` with a small barrel."""
         # Set a second array of the same shape and range, but different values
