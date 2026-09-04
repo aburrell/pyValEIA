@@ -24,9 +24,13 @@ class TestSwarmDownload(unittest.TestCase):
         # Set test variables
         self.ddate = dt.datetime(2013, 12, 2)
         self.sat = "A"
+        self.dataset = "LP"
         self.stime_str = "101113"
         self.etime_str = "140109"
         self.f_end = "0701"
+
+        # Set up expected file output
+        self.fnum = {"LP": 3, "TIE": 2}
 
         # Set up the test download directory
         self.tempdir = tempfile.TemporaryDirectory()
@@ -44,8 +48,9 @@ class TestSwarmDownload(unittest.TestCase):
         self.tempdir.cleanup()
 
         # Clear the attributes
-        del self.ddate, self.stime_str, self.etime_str, self.f_end
+        del self.ddate, self.stime_str, self.etime_str, self.f_end, self.dataset
         del self.tempdir, self.sat, self.lout, self.log_capture, self.file_dir
+        del self.fnum
         return
 
     def eval_dir_structure(self, level=4):
@@ -109,7 +114,8 @@ class TestSwarmDownload(unittest.TestCase):
                                        "*.ZIP"))) > 0
 
         if self.file_dir is not None:
-            self.assertEqual(len(glob(os.path.join(self.file_dir, "*"))), 3)
+            self.assertEqual(len(glob(os.path.join(self.file_dir, "*"))),
+                             self.fnum[self.dataset])
 
         return is_zip
 
@@ -194,6 +200,25 @@ class TestSwarmDownload(unittest.TestCase):
 
         # Ensure the file exists and the zip file is still there
         self.assertTrue(self.eval_files(), msg="Zip file missing: {:}".format(
+            self.lout))
+
+        return
+
+    def test_good_download_daily_tie(self):
+        """Test a good download for the daily files."""
+        # Raise the expected logging messages and get the data file
+        self.ddate = dt.datetime(2013, 12, 10)
+        self.dataset = "TIE"
+        self.f_end = "0101"
+        download.download_and_unzip_swarm(
+            self.ddate, self.sat, self.tempdir.name, level='2daily',
+            dataset=self.dataset, f_end=self.f_end)
+
+        # Ensure the subdirectories were created
+        self.eval_dir_structure(level=4)
+
+        # Ensure the file exists and the zip file is not there
+        self.assertTrue(self.eval_files(), msg="Zip file present: {:}".format(
             self.lout))
 
         return
