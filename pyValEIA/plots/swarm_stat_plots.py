@@ -725,7 +725,7 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     See Also
     --------
     io.load.multiday_states_report
-    
+
     """
     fig, ax = plt.subplots(figsize=(10, 10))
     plt.rcParams.update({'font.size': fosi})
