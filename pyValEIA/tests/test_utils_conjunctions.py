@@ -13,7 +13,7 @@ from pyValEIA.utils import conjunctions
 
 
 class TestSwarmConjFuncs(unittest.TestCase):
-    """Tests for functions that support model-data conjunctions."""
+    """Tests for functions that support model-Swarm conjunctions."""
 
     def setUp(self):
         """Set up the test runs."""
@@ -84,6 +84,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
                                 self.swarm_dat['Mag_Lat'].min())
         self.assertEqual(self.out[0]['alt'][0],
                          self.mod_dict['hmf2'][0, 0, 0])
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -110,6 +113,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
                          self.swarm_dat['Mag_Lat'].min())
         self.assertEqual(self.out[0]['alt'][0],
                          self.mod_dict['hmf2'][0, 0, 0])
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -135,6 +141,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
                                 self.swarm_dat['Mag_Lat'].min())
         self.assertLessEqual(abs(self.out[0]['alt'][0] - self.swarm_alt['A']),
                              50)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -160,6 +169,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
                                 self.swarm_dat['Mag_Lat'].min())
         self.assertEqual(self.out[0]['alt'][0],
                          self.mod_dict['hmf2'][0, 0, 0] + 100)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -171,7 +183,7 @@ class TestSwarmConjFuncs(unittest.TestCase):
         """Test a successful run of `swarm_conjunction` with large tdif."""
         # Alter the Swarm times
         self.swarm_dat['Time'] = self.swarm_dat['Time'] + dt.timedelta(hours=6)
-        
+
         # Run the conjunction with the defaults
         self.out = conjunctions.swarm_conjunction(self.mod_dict,
                                                   self.swarm_dat, max_tdif=360)
@@ -187,6 +199,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
         self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(),
                                 self.swarm_dat['Mag_Lat'].min())
         self.assertEqual(self.out[0]['alt'][0], self.mod_dict['hmf2'][0, 0, 0])
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -214,6 +229,9 @@ class TestSwarmConjFuncs(unittest.TestCase):
         self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(),
                                 self.swarm_dat['Mag_Lat'].min())
         self.assertEqual(self.out[0]['alt'][0], self.mod_dict['hmf2'][0, 0, 0])
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'Ne', 'Mag_Lat', 'Mag_Lon', 'alt',
+                              'Longitude', 'Latitude'])
 
         # Test the second output element
         self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
@@ -225,7 +243,7 @@ class TestSwarmConjFuncs(unittest.TestCase):
         """Test `swarm_conjunction` raises ValueError with bad altitude."""
         # Alter the Swarm altitudes
         self.swarm_dat['Altitude'] += 1000.0
-        
+
         # Run the conjunction and evaluate error
         with self.assertRaisesRegex(ValueError, 'not reasonable for Swarm'):
             conjunctions.swarm_conjunction(self.mod_dict, self.swarm_dat)
@@ -247,4 +265,148 @@ class TestSwarmConjFuncs(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unknown coordinate type'):
             conjunctions.swarm_conjunction(self.mod_dict, self.swarm_dat,
                                            mod_loc_type='NotACoord')
+        return
+
+
+class TestMadConjFuncs(unittest.TestCase):
+    """Tests for functions that support model-Madrigal TEC conjunctions."""
+
+    def setUp(self):
+        """Set up the test runs."""
+        self.mod_dict = {
+            'time': np.array([dt.datetime(2013, 12, 1)
+                              + dt.timedelta(minutes=15 * i)
+                              for i in range(20)]),
+            'glon': np.arange(-180, 180.1, 15),
+            'glat': np.arange(-90, 90.1, 1),
+            'alt': np.arange(100, 1500, 50)}
+        self.mod_dict['tec'] = np.ones(shape=(self.mod_dict['time'].shape[0],
+                                              self.mod_dict['glat'].shape[0],
+                                              self.mod_dict['glon'].shape[0]))
+        self.stime = self.mod_dict['time'][0]
+        self.mlat = 20.0
+        self.lon = 45.0
+        self.out = None
+        return
+
+    def tearDown(self):
+        """Tear down the test environment."""
+        del self.stime, self.mod_dict, self.mlat, self.out, self.lon
+        return
+
+    def test_mad_conjunction_bad_coord(self):
+        """Test `mad_conjunction` raises a ValueError with a bad coord sys."""
+        # Raise the error and test the message
+        with self.assertRaisesRegex(ValueError, "unknown longitude type"):
+            conjunctions.mad_conjunction(self.mod_dict, self.mlat, self.lon,
+                                         self.stime, lon_type="Nope")
+        return
+
+    def test_mad_conjunction_bad_time(self):
+        """Test `mad_conjunction` raises a ValueError with a bad coord sys."""
+        # Raise the error and test the message
+        with self.assertRaisesRegex(ValueError, "> 20 min"):
+            conjunctions.mad_conjunction(self.mod_dict, self.mlat, self.lon,
+                                         self.stime + dt.timedelta(days=1))
+        return
+
+    def test_mad_conjunction_geo(self):
+        """Test a successful run of `mad_conjunction` with geo inputs."""
+        # Run the conjunction with the defaults
+        self.out = conjunctions.mad_conjunction(self.mod_dict, self.mlat,
+                                                self.lon, self.stime)
+
+        # Test the outputs
+        self.assertEqual(len(self.out), 2)
+
+        # Test the first output element
+        self.assertTrue(np.all([self.stime == otime[0]
+                                for otime in self.out[0]['Time']]))
+        self.assertLessEqual(self.out[0]['Mag_Lat'].max(), self.mlat)
+        self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(), -self.mlat)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'tec', 'Mag_Lat', 'Mag_Lon', 'Longitude',
+                              'Latitude'])
+
+        # Test the second output element
+        self.assertTrue(np.all(self.out[1]['tec'] == self.mod_dict['tec'][0]))
+        self.assertTrue(np.all(self.out[1]['glon'] == self.mod_dict['glon']))
+        self.assertTrue(np.all(self.out[1]['glat'] == self.mod_dict['glat']))
+        return
+
+    def test_mad_conjunction_mag(self):
+        """Test a successful run of `mad_conjunction` with mag inputs."""
+        # Run the conjunction with the defaults
+        self.out = conjunctions.mad_conjunction(self.mod_dict, self.mlat,
+                                                self.lon, self.stime,
+                                                lon_type='mag')
+
+        # Test the outputs
+        self.assertEqual(len(self.out), 2)
+
+        # Test the first output element
+        self.assertTrue(np.all([self.stime == otime[0]
+                                for otime in self.out[0]['Time']]))
+        self.assertLessEqual(self.out[0]['Mag_Lat'].max(), self.mlat)
+        self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(), -self.mlat)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'tec', 'Mag_Lat', 'Mag_Lon', 'Longitude',
+                              'Latitude'])
+
+        # Test the second output element
+        self.assertTrue(np.all(self.out[1]['tec'] == self.mod_dict['tec'][0]))
+        self.assertTrue(np.all(self.out[1]['glon'] == self.mod_dict['glon']))
+        self.assertTrue(np.all(self.out[1]['glat'] == self.mod_dict['glat']))
+        return
+
+    def test_mad_conjunction_big_tdif(self):
+        """Test a successful run of `mad_conjunction` with a time offset."""
+        # Run the conjunction with the defaults
+        self.out = conjunctions.mad_conjunction(self.mod_dict, self.mlat,
+                                                self.lon, self.stime
+                                                + dt.timedelta(hours=6),
+                                                max_tdif=360)
+
+        # Test the outputs
+        self.assertEqual(len(self.out), 2)
+
+        # Test the first output element
+        self.assertTrue(np.all([self.mod_dict['time'][-1] == otime[0]
+                                for otime in self.out[0]['Time']]))
+        self.assertLessEqual(self.out[0]['Mag_Lat'].max(), self.mlat)
+        self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(), -self.mlat)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'tec', 'Mag_Lat', 'Mag_Lon', 'Longitude',
+                              'Latitude'])
+
+        # Test the second output element
+        self.assertTrue(np.all(self.out[1]['tec'] == self.mod_dict['tec'][0]))
+        self.assertTrue(np.all(self.out[1]['glon'] == self.mod_dict['glon']))
+        self.assertTrue(np.all(self.out[1]['glat'] == self.mod_dict['glat']))
+        return
+
+    def test_mad_conjunction_nmf2(self):
+        """Test a successful run of `mad_conjunction` with NmF2 inputs."""
+        # Run the conjunction with the defaults
+        self.mod_dict['nmf2'] = self.mod_dict['tec']
+        self.out = conjunctions.mad_conjunction(self.mod_dict, self.mlat,
+                                                self.lon, self.stime,
+                                                mk_ne='nmf2')
+
+        # Test the outputs
+        self.assertEqual(len(self.out), 2)
+
+        # Test the first output element
+        self.assertTrue(np.all([self.stime == otime[0]
+                                for otime in self.out[0]['Time']]))
+        self.assertLessEqual(self.out[0]['Mag_Lat'].max(), self.mlat)
+        self.assertGreaterEqual(self.out[0]['Mag_Lat'].min(), -self.mlat)
+        self.assertListEqual(list(self.out[0].columns),
+                             ['Time', 'nmf2', 'Mag_Lat', 'Mag_Lon', 'Longitude',
+                              'Latitude'])
+
+        # Test the second output element
+        self.assertTrue(np.all(self.out[1]['nmf2'] == self.mod_dict['nmf2'][0]))
+        self.assertTrue(np.all(self.out[1]['glon'] == self.mod_dict['glon']))
+        self.assertTrue(np.all(self.out[1]['glat'] == self.mod_dict['glat']))
         return
