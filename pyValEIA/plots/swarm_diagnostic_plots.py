@@ -503,8 +503,8 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
     mod_file_dir : str
         directory where model file can be found
     mod_name_format : str
-        prefix of the desired model NetCDF file including date format before
-        the .nc extention, e.g., 'NIMO_AQ_%Y%j'
+        Filename format of the desired model file including date format, as
+        desired by the loading function, e.g., 'NIMO_AQ_%Y%j'
     mod_load_func : function
         Function for loading the model data (default=`io.load.load_nimo`)
     MLat: int
@@ -1128,8 +1128,8 @@ def model_swarm_single_plot(stime, satellite, swarm_file_dir, mod_file_dir,
     mod_file_dir : str
         directory where nimo file can be found
     mod_name_format : str
-        Prefix of model file including date format before the .nc extension,
-        e.g., 'NIMO_AQ_%Y%j'
+        Filename format of the desired model file including date format, as
+        desired by the loading function, e.g., 'NIMO_AQ_%Y%j'
     model_name : str
         Model name (default='NIMO')
     mod_load_func : function

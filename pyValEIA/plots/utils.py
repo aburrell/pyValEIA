@@ -174,7 +174,7 @@ def daynight_label(model, LT_range=None):
     Parameters
     ----------
     model : pd.DataFrame
-        model dataframe build by states_report_swarm
+        model dataframe build by `multiday_states_report`
     LT_range : list-like or NoneType
         Range of day night local time, or None for default of [7, 19]
         (default=None)
@@ -185,6 +185,10 @@ def daynight_label(model, LT_range=None):
         legend label for daytime
     lab_night : string
         legend label for nighttime
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     if LT_range is None:

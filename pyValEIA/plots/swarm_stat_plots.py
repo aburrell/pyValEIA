@@ -28,9 +28,9 @@ def lss_plot_Swarm(model1, model2, eia_type, date_range, model1_name='Model1',
     Parameters
     ----------
     model1 : DataFrame
-        first model DataFrame built by multiday_states_report
+        first model DataFrame built by `multiday_states_report`
     model2 : DataFrame
-        second model DataFrame built by multiday_states_report
+        second model DataFrame built by `multiday_states_report`
     eia_type : str
         desired eia type for fig title
     date_range : datetime range
@@ -229,7 +229,7 @@ def one_model_lss_plot_Swarm(model1, eia_type, date_range, model_name='Model',
     Parameters
     ----------
     model1 : DataFrame
-        model DataFrame built by multiday_states_report
+        model DataFrame built by `multiday_states_report`
     eia_type : str
         desired eia type for fig title
     date_range : datetime range
@@ -401,7 +401,7 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=None):
         matplotlib.plt axis
     model : DataFrame
         DataFrame of model data including skill and local times
-        built by states_report_swarm
+        built by `multiday_states_report`
     bin_lons : int
         Number of bins between -180 and 180 deg geo lon (default=37)
     DayNight : bool
@@ -418,6 +418,10 @@ def map_hist_panel(ax, model, bin_lons=37, DayNight=True, LT_range=None):
         original axis with data plotted
     hist_ax : plt axis
         twinx axis to ax with histogram plotted
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     # Update to default for kwargs
@@ -486,7 +490,7 @@ def plot_hist_quad_maps(model_states, sat, eia_type, date_range, bin_lons=37,
     ----------
     model_states : pd.DataFrame
         DataFrame of model data including skill and local times built by
-        multiday_states_report
+        `multiday_states_report`
     sat : str
         swarm satellite 'A', 'B', or 'C'
     eia_type : str
@@ -615,7 +619,7 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type, colors=None):
     ----------
     model_states : pd.DataFrame
         DataFrame of model data including skill and local times built by
-        multiday_states_report
+        `multiday_states_report`
     df_table : pd.DataFrame
         Decision table build by decision_table_sat
     fig : figure
@@ -683,9 +687,9 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     Parameters
     ----------
     model1 : pd.DataFrame
-        First model DataFrame built by states_report_swarm
+        First model DataFrame built by `multiday_states_report`
     model2 : pd.DataFrame
-        Second model DataFrame built by states_report_swarm
+        Second model DataFrame built by `multiday_states_report`
     eia_type : str
         Desired eia type for fig title
     model1_name : str
@@ -717,6 +721,10 @@ def HMFC_percent_figure(model1, model2, eia_type, model1_name='Model1',
     For quick viewing, there are 4 shaded regions. These represent when a
     model is doing better than a coin toss. Ideally, False positives and Misses
     would have a low % and Hits and Correct Negatives have a higher percentage
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -800,11 +808,11 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     ----------
     model_states : dataframe
         dataframe of model data including skill and local times
-        built by states_report_swarm
+        built by `multiday_states_report`
     sat : str
-        swarm satellite 'A', 'B', or 'C'
+        Swarm satellite 'A', 'B', or 'C'
     eia_type : str
-        eia state e.g. EIA, Peak, etc. depending on what is considered a hit
+        EIA state e.g. EIA, Peak, etc. depending on what is considered a hit
     date_range : pandas daterange
         range of dates for title purposes
     bin_lons : int kwarg
@@ -828,6 +836,10 @@ def plot_2hist_quad_maps(model_states, model2_states, sat, eia_type, date_range,
     -------
     fig : figure handle
         fig with 4 panels of hist maps
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     # Update defaults
@@ -990,7 +1002,7 @@ def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
         matplotlib.plt axis
     model : dataframe
         dataframe of model data including skill and local times
-        built by states_report_swarm
+        built by `multiday_states_report`
     bin_lons : int kwarg
         number of bins between -180 and 180 deg geo lon
         np.linspace(-180, 180, bin_lons)
@@ -1007,6 +1019,10 @@ def map_2hist_panel(ax, model, model2, bin_lons=37, DayNight=True,
         original axis with data plotted
     hist_ax : plt axis
         twinx axis to ax with histogram plotted
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     # Update defaults
