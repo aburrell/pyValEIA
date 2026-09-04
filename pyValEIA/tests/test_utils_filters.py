@@ -33,6 +33,15 @@ class TestFiltersFuncs(unittest.TestCase):
         self.assertListEqual(list(self.in_arr[self.out]), [0, 50])
         return
 
+    def test_detect_outliers_single_val(self):
+        """Test success of detect outliers."""
+        # Find outliers
+        self.out = filters.detect_outliers(self.in_arr[0])
+
+        # Test output, can't have outliers with a single value
+        self.assertEqual(len(self.out), 0)
+        return
+
     def test_detect_outliers_nan(self):
         """Test detect outliers routine with only NaN."""
         # Find outliers
@@ -60,11 +69,12 @@ class TestFiltersFuncs(unittest.TestCase):
     def test_find_nan_ranges(self):
         """Test find_nan_ranges success."""
         # Add another NaN range
+        self.in_arr[0] = np.nan
         self.in_arr[2:4] = np.nan
         self.out = filters.find_nan_ranges(self.in_arr)
 
         # Evaluate output
-        self.assertEqual(len(self.out), 2)
+        self.assertEqual(len(self.out), 3)
 
         for i in self.out:
             self.assertTrue(np.isnan(self.in_arr[slice(*i)]).all(),
@@ -92,8 +102,21 @@ class TestFiltersFuncs(unittest.TestCase):
                 self.assertGreaterEqual(self.out.min(), np.nanmin(self.in_arr))
         return
 
-    def test_simple_barrel_roll(self):
-        """Test success of `simple_barrel_roll`."""
+    def test_rolling_nanmeasure_all_nan(self):
+        """Test success of `rolling_nanmeasure`."""
+        self.in_arr = np.full(shape=self.in_arr.shape, fill_value=np.nan)
+        for meas in ['mean', 'median', 'average']:
+            with self.subTest(measure=meas):
+                # Get the rolling central values
+                self.out = filters.rolling_nanmeasure(self.in_arr, 3,
+                                                      measure=meas)
+
+                # Test the output
+                self.assertTrue(np.isnan(self.out).all())
+        return
+
+    def test_simple_barrel_roll_no_roi(self):
+        """Test success of `simple_barrel_roll` with a small barrel."""
         # Set a second array of the same shape and range, but different values
         xvar = np.linspace(np.nanmin(self.in_arr), np.nanmax(self.in_arr),
                            self.in_arr.shape[0])
@@ -102,7 +125,7 @@ class TestFiltersFuncs(unittest.TestCase):
             with self.subTest(envelope=env, envelope_lower=low,
                               envelope_upper=up):
                 self.out = filters.simple_barrel_roll(
-                    xvar, self.in_arr, 30, envelope=env, envelope_lower=low,
+                    xvar, self.in_arr, 1, envelope=env, envelope_lower=low,
                     envelope_upper=up)
 
                 # Test the output
