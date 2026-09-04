@@ -41,9 +41,9 @@ def set_swarm_alt(sat_id):
 
 
 def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
-                      offset=0, mk_time='time', mk_lon='glon', mk_lat='glat',
-                      mk_alt='alt', mk_ne='dene', mk_hmf2='hmf2',
-                      mk_nmf2='nmf2', mod_loc_type='geo'):
+                      swarm_tres=500000, offset=0, mk_time='time',
+                      mk_lon='glon', mk_lat='glat', mk_alt='alt', mk_ne='dene',
+                      mk_hmf2='hmf2', mk_nmf2='nmf2', mod_loc_type='geo'):
     """Find conjunctions between a model and Swarm.
 
     Parameters
@@ -52,13 +52,15 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
         Dictionary of model data
     swarm_check : pd.DataFrame
         DataFrame of Swarm data
-    alt_str: str kwarg
+    alt_str: str
         'A', 'B', 'C' or 'hmf2' for altitude (default='hmf2')
     inc : int
         Increase altitude by specified incriment in km (default=0)
-    max_tdif : double nkwarg
+    max_tdif : int
         Maximum time distance (in minutes) between a NIMO and Swarm
         conjunction allowed (default=15)
+    swarm_tres : int
+        Swarm time resolution in microseconds (default=500000)
     offset : int
         Number of days beyond the loaded Swarm period to check (default=0)
     mk_time : str
@@ -128,18 +130,19 @@ def swarm_conjunction(mod_dc, swarm_check, alt_str='hmf2', inc=0, max_tdif=15,
     mod_time = mod_dc[mk_time][((mod_dc[mk_time] >= sw_time1)
                                 & (mod_dc[mk_time] <= sw_time2))]
 
-    # If no time is between sw_time1 and sw_time2 look outside of range
+    # If no time is between sw_time1 and sw_time2 look outside of range by
+    # one time resolution
     if len(mod_time) == 0:
         if max_tdif > 0:
-            near_tdif = int(np.floor(max_tdif / 3))
-            mod_time = mod_dc[mk_time][((mod_dc[mk_time] >= sw_time1
-                                         - dt.timedelta(minutes=near_tdif))
-                                        & (mod_dc[mk_time] <= sw_time2))]
+            mod_time = mod_dc[mk_time][
+                (mod_dc[mk_time] >= sw_time1
+                 - dt.timedelta(microseconds=swarm_tres))
+                & (mod_dc[mk_time] <= sw_time2)]
             if len(mod_time) == 0:
                 mod_time = mod_dc[mk_time][
-                    ((mod_dc[mk_time] >= sw_time1)
-                     & (mod_dc[mk_time] <= sw_time2
-                        + dt.timedelta(minutes=near_tdif)))]
+                    (mod_dc[mk_time] >= sw_time1)
+                    & (mod_dc[mk_time] <= sw_time2
+                       + dt.timedelta(microseconds=swarm_tres))]
 
     if len(mod_time) > 1:
         mint = np.array([min([abs(mtime - sw_time1), abs(mtime - sw_time2)])
