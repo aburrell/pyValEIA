@@ -10,6 +10,7 @@ Summary of all changes made since the first release
 * BUG: updated the Swarm downloads to reflect remote changes
 * BUG: changed `simple_barrel_roll` envelope selected to use inequality masks
        that accept equal values
+* BUG: fixed temporal difference evaluation in conjunction functions
 * ENH: added the option to use magnetic meridians in the TEC
 * DOC: fixed errors in docstrings and comments
 * DOC: updated the README example
