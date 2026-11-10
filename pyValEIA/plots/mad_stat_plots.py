@@ -20,7 +20,7 @@ def Mad_LSS_plot(model1, eia_type, date_range, model_name='Model',
     Parameters
     ----------
     model1 : pd.DataFrame
-        model DataFrame built by states_report_swarm
+        model DataFrame built by `multiday_states_report`
     eia_type : str
         desired eia type for fig title
     date_range : datetime range
@@ -52,6 +52,10 @@ def Mad_LSS_plot(model1, eia_type, date_range, model_name='Model',
     -----
     LSS is only useful in comparison to another model, therefore,
     coin set to True is highly recommended!
+
+    See Also
+    --------
+    io.load.multiday_states_report
 
     """
     if LT_range == 'day':

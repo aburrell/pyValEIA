@@ -10,28 +10,28 @@ Example
 To compare Swarm and pyIRI:
 
 ```
-import matplotlib.pyplot as plt
-import pandas as pd
-from datetime import datetime, timedelta
-
-# Package modules
-from SwarmPyIRI import PyIRI_NIMO_SWARM_plot
+import datetime as dt
+import pyValEIA
 
 # Create new PyIRI files and compare to Swarm
 # Set the directories for figures, EIA info files, and Swarm data
-fig_dir='~/Plots/pyIRI_SWARM_offsets'
-daily_dir='~/Type_Files/pyIRI_SWARM_offsets'
+fig_dir='~/Plots/Model_SWARM_offsets'
+daily_dir='~/Type_Files/Model_SWARM_offsets'
 swarm_fdir = '~/swarm_data'
+model_fdir = '~/model_data'
 
 # Set the comparison day and time
-stime1 = datetime(2020, 4, 15, 0, 0)
+stime1 = dt.datetime(2025, 4, 1, 0, 0)
 
-# Create new PyIRI files and compare to Swarm for a range of days (2)
-for i in range(2):
-    stime = stime1 + timedelta(days=i)
-    print(stime)
-    pdf_out = PyIRI_NIMO_SWARM_plot(stime, daily_dir, swarm_fdir, fig_on=True
-        fig_save_dir=fig_dir, file_save_dir=daily_dir)
+# Download the Swarm A data
+pyValEIA.io.download.download_and_unzip_swarm(stime1, 'A', swarm_fdir,
+                                              f_end="0701")
+
+# Create plots and daily comparison files between Swarm A and your model
+daily_df = pyValEIA.plots.swarm_diagnostic_plots.model_swarm_mapplot(
+    stime, swarm_fdir, model_fdir, 'Model_%Y%j.nc',
+    mod_load_func=function_to_load_model_data, fig_dir=fig_dir,
+    file_dir=daily_dir)
 
 ```
 
