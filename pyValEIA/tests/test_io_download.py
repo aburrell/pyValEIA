@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Full license can be found in License.md
 # -----------------------------------------------------------------------------
-"""Tests for functions in `utils.io.download`."""
+"""Tests for functions in `io.download`."""
 
 import datetime as dt
 from io import StringIO
