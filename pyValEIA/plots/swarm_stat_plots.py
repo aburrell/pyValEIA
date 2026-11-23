@@ -630,7 +630,7 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type, colors=None):
         colors to be plotted for each satellite (default=None)
 
     Returns
-    ------
+    -------
     fig : figure
         the resulting figure
 
