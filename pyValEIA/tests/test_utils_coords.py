@@ -92,6 +92,22 @@ class TestTimeFuncs(unittest.TestCase):
                     coords.longitude_to_local_time(lon_in, ut_in)
         return
 
+    def test_get_date_format_str_file(self):
+        """Test the date formatting string with file output."""
+        self.out = self.dtime.strftime(coords.get_date_format_str('file'))
+
+        self.assertEqual(self.out.find(' '), -1)
+        self.assertGreater(self.out.find('_'), 0)
+        return
+
+    def test_get_date_format_str_plot(self):
+        """Test the date formatting string with plot output."""
+        self.out = self.dtime.strftime(coords.get_date_format_str('plot'))
+
+        self.assertEqual(self.out.find('_'), -1)
+        self.assertGreater(self.out.find(' '), 0)
+        return
+
 
 class TestLocFuncs(unittest.TestCase):
     """Tests for location-handling functions."""
