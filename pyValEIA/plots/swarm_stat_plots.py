@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 """Functions to plot Swarm skill score statistical outcomes."""
 
-import matplotlib.gridspec as gridspec
+from matplotlib import gridspec
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
