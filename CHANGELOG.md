@@ -12,6 +12,7 @@ Summary of all changes made since the first release
        that accept equal values
 * BUG: fixed temporal difference evaluation in conjunction functions
 * ENH: added the option to use magnetic meridians in the TEC
+* ENH: added a utility function to format time for file output or plots
 * DOC: fixed errors in docstrings and comments
 * DOC: updated the README example
 
