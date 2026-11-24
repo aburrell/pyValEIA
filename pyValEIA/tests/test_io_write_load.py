@@ -122,7 +122,6 @@ class TestWriteLoadData(unittest.TestCase):
         """Clean up the test environment."""
 
         for out_file in self.outfiles:
-            print(out_file)
             os.remove(out_file)
 
         del self.start_time, self.file_dir, self.out, self.stats, self.outfiles
