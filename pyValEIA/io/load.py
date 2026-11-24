@@ -443,7 +443,7 @@ def load_daily_stats(stime, model, obs, file_dir, **kwargs):
 
     # Test that the file exists
     if not os.path.isfile(fname):
-        raise ValueError('Could not file file: {:s}'.format(fname))
+        raise ValueError('Could not find file: {:s}'.format(fname))
 
     # Open the file
     dat = np.genfromtxt(fname, delimiter=None, dtype=None, skip_header=0,

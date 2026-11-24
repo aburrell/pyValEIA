@@ -298,7 +298,7 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
         swarm_dc = {'A': swarm_A_full, 'B': swarm_B_full, 'C': swarm_C_full}
 
     # Convert daily file dates into datetime and get relevant model parameters
-    format_date = "%Y/%m/%d_%H:%M:%S.%f"
+    format_date = coords.get_date_format_str()
     date_mod = pd.to_datetime(daily_df[
         '{:s}_Time'.format(model_name.capitalize())].values, format=format_date)
 
@@ -448,7 +448,7 @@ def pyiri_model_swarm_plot(sday, daily_dir, swarm_dir, model_name="NIMO",
             axi.set_xlabel("Latitude (\N{DEGREE SIGN})")
             axi.set_ylabel("Ne (cm$^-3$)")
 
-            plot_date_str = tim.strftime('%Y%m%d %H:%M')
+            plot_date_str = tim.strftime(coords.get_date_format_str('plot'))
             axi.set_title("PyIRI " + plot_date_str
                           + " (" + str(int(aalt[0])) + "km)")
             if 'south' in eia_type_slope:
@@ -725,9 +725,9 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
             # Save time in format %Y/%m/%d_%H:%M:%S.%f to ensure that
             # np.genfromtxt sees data as 1 single string
             df.at[f, swt_str1] = swarm_check["Time"].iloc[0].strftime(
-                '%Y/%m/%d_%H:%M:%S.%f')
+                coords.get_date_format_str())
             df.at[f, swt_str2] = swarm_check["Time"].iloc[-1].strftime(
-                '%Y/%m/%d_%H:%M:%S.%f')
+                coords.get_date_format_str())
 
             # Save Magnetic Latitude range, geographic longitude range, and
             # geographic latitude range
@@ -793,12 +793,12 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
                     logger.info(' '.join([
                         'Swarm type unknown for Sat', sata, 'at',
                         swarm_check['Time'].iloc[-1].strftime(
-                            '%Y/%m/%d %H:%M')]))
+                            coords.get_date_format_str('plot'))]))
             else:
                 # Give user a heads up for lack of data
                 logger.info(' '.join(['No good Swarm Ne for Sat', sata, 'at',
                                       swarm_check['Time'].iloc[-1].strftime(
-                                          '%Y/%m/%d %H:%M')]))
+                                          coords.get_date_format_str('plot'))]))
                 continue
 
             # If user specified fig_on is True, create a figure
@@ -926,13 +926,13 @@ def model_swarm_mapplot(start_day, swarm_file_dir, mod_file_dir,
                     logger.info(''.join([
                         'Model EIA type unknown at ', alt_str, ' height: ',
                         mod_swarm_alt["Time"].iloc[0][0].strftime(
-                            '%Y/%m/%d_%H:%M:%S.%f')]))
+                            coords.get_date_format_str())]))
 
                 # General model info only need to save once per alt_arr
                 nts = '{:s}_Time'.format(col_mod_name)
                 if i == 0:
                     df.at[f, nts] = mod_swarm_alt["Time"].iloc[0][0].strftime(
-                        '%Y/%m/%d_%H:%M:%S.%f')
+                        coords.get_date_format_str())
                     df.at[f, '{:s}_GLon'.format(col_mod_name)] = mod_swarm_alt[
                         "Longitude"].iloc[0]
                     df.at[f, '{:s}_Min_MLat'.format(col_mod_name)] = min(

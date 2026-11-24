@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 """Functions to plot Swarm skill score statistical outcomes."""
 
-import matplotlib.gridspec as gridspec
+from matplotlib import gridspec
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
@@ -630,7 +630,7 @@ def HMFC_percent_panel(model_states, df_table, fig, ax, eia_type, colors=None):
         colors to be plotted for each satellite (default=None)
 
     Returns
-    ------
+    -------
     fig : figure
         the resulting figure
 

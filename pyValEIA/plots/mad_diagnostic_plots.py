@@ -527,7 +527,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
             if (nan_perc < 20):
                 f += 1
                 df.at[f, 'Mad_Time_Start'] = mad_dc['time'][mt].strftime(
-                    '%Y/%m/%d_%H:%M:%S.%f')
+                    coords.get_date_format_str())
 
                 df.at[f, 'Mad_MLat'] = abs(mlat_val)
                 df.at[f, 'Mad_{:s}Lon_Start'.format(
@@ -581,7 +581,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                                     window_lat=mod_window)
 
                 df.at[f, f'{col_mod_name}_Time'] = mod_df["Time"].iloc[0][
-                    0].strftime('%Y/%m/%d_%H:%M:%S.%f')
+                    0].strftime(coords.get_date_format_str())
 
                 df.at[f, '{:s}_{:s}Lon'.format(
                     col_mod_name,
@@ -666,7 +666,7 @@ def model_mad_daily_file(start_day, mad_file_dir, mod_file_dir, mod_name_format,
                 j = j + 1
 
         if fig_on:
-            t1 = mad_dc['time'][mt].strftime('%Y/%m/%d %H:%M')
+            t1 = mad_dc['time'][mt].strftime(coords.get_date_format_str('plot'))
             ts1 = mad_dc['time'][mt].strftime('%H%M')
             t2 = mad_dc['time'][mt] + dt.timedelta(minutes=15)
             ts2 = t2.strftime('%H%M')

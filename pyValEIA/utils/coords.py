@@ -12,6 +12,27 @@ import pandas as pd
 from apexpy import Apex
 
 
+def get_date_format_str(output_type="file"):
+    """Get the standard date format string.
+
+    Parameters
+    ----------
+    output_type : str
+        Expects one of 'file' or 'plot' (default='file')
+
+    Returns
+    -------
+    date_fmt : str
+        A string useable by datetime to create a formatted string
+
+    """
+    date_fmt = "%Y/%m/%d_%H:%M:%S.%f"
+    if output_type.lower() == "plot":
+        date_fmt = '%Y/%m/%d %H:%M'
+
+    return date_fmt
+
+
 def longitude_to_local_time(longitude, utc_time):
     """Convert geographic/geodetic longiutde to solar local time.
 
